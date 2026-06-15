@@ -41,8 +41,12 @@ function filterTree(n, t) {
   n.children && n.children.forEach(c => { const r = filterTree(c, t); r && f.push(r); });
   return (m || f.length > 0) ? { ...n, children: f } : null;
 }
+function findNode(n, name) {
+  if (n.name === name) return n;
+  if (n.children) for (const c of n.children) { const r = findNode(c, name); if (r) return r; }
+  return null;
+}
 
-// Exact element positions from tree.svg design
 const TRUNK = [[500,1260],[500,1222],[500,1184],[500,1146],[500,1108],[500,1070],[500,1032]];
 const FRUIT = [
   [120,800],[85,710],[880,800],[915,710],
@@ -69,38 +73,23 @@ const LEAF = [
 
 function assignPositions(root) {
   const all = [root];
-  for (let i = 0; i < all.length; i++) {
-    if (all[i].children) all[i].children.forEach(c => all.push(c));
-  }
-  // Root stays at base
+  for (let i = 0; i < all.length; i++) if (all[i].children) all[i].children.forEach(c => all.push(c));
   root._x = 500; root._y = 1315;
-  // Separate by depth priority
   const byDepth = {};
   all.forEach(n => { if (n === root) return; const d = n.depth || 1; if (!byDepth[d]) byDepth[d] = []; byDepth[d].push(n); });
   let ti = 0, fi = 0, li = 0;
-  // Gen 1 → trunk
   if (byDepth[1]) byDepth[1].forEach(n => { if (ti < TRUNK.length) { n._x = TRUNK[ti][0]; n._y = TRUNK[ti][1]; ti++; } });
-  // Gens 2-3 → fruit
-  for (let d = 2; d <= 3; d++) {
-    if (byDepth[d]) byDepth[d].forEach(n => { if (fi < FRUIT.length) { n._x = FRUIT[fi][0]; n._y = FRUIT[fi][1]; fi++; } });
-  }
-  // Remaining fruit positions → gen 4+
-  if (fi < FRUIT.length) {
-    for (let d = 4; d <= 9; d++) {
-      if (byDepth[d]) byDepth[d].forEach(n => { if (fi < FRUIT.length) { n._x = FRUIT[fi][0]; n._y = FRUIT[fi][1]; fi++; } });
-    }
-  }
-  // All remaining → leaves
-  for (let d = 1; d <= 9; d++) {
-    if (byDepth[d]) byDepth[d].forEach(n => { if (!n._x && li < LEAF.length) { n._x = LEAF[li][0]; n._y = LEAF[li][1]; li++; } });
-  }
+  for (let d = 2; d <= 3; d++) if (byDepth[d]) byDepth[d].forEach(n => { if (fi < FRUIT.length) { n._x = FRUIT[fi][0]; n._y = FRUIT[fi][1]; fi++; } });
+  if (fi < FRUIT.length) for (let d = 4; d <= 9; d++) if (byDepth[d]) byDepth[d].forEach(n => { if (fi < FRUIT.length) { n._x = FRUIT[fi][0]; n._y = FRUIT[fi][1]; fi++; } });
+  for (let d = 1; d <= 9; d++) if (byDepth[d]) byDepth[d].forEach(n => { if (!n._x && li < LEAF.length) { n._x = LEAF[li][0]; n._y = LEAF[li][1]; li++; } });
 }
+
+let expandedNode = null, interG = null;
 
 async function loadData() {
   const sb = document.getElementById('statusBar');
   sb.textContent = 'جاري التحميل...';
   sb.className = 'status-bar loading';
-
   try {
     const r = await fetch(DATA_FILE + '?t=' + Date.now());
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -120,9 +109,7 @@ async function loadData() {
     sb.textContent = '⚠ ' + e.message;
     sb.className = 'status-bar error';
     const c = localStorage.getItem('cache');
-    if (c) {
-      try { treeData = JSON.parse(c); assignPositions(treeData); await loadSvg(); } catch(e2) {}
-    }
+    if (c) { try { treeData = JSON.parse(c); assignPositions(treeData); await loadSvg(); } catch(e2) {} }
   }
 }
 
@@ -136,6 +123,9 @@ async function loadSvg() {
   const txt = await r.text();
   const m = txt.match(/<svg[^>]*>([\s\S]*)<\/svg>/i);
   svg.innerHTML = m ? m[1] : txt;
+  interG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  interG.id = 'interactive';
+  svg.appendChild(interG);
 
   const total = count(treeData), depth = maxDepth(treeData);
   svg.querySelectorAll('text').forEach(t => {
@@ -149,10 +139,12 @@ async function loadSvg() {
 
 function addLabels(svg) {
   const ns = 'http://www.w3.org/2000/svg';
-  const g = document.createElementNS(ns, 'g');
-  g.id = 'nameLabels';
+  const g = document.createElementNS(ns, 'g'); g.id = 'nameLabels';
 
   function add(name, x, y, depth) {
+    const wrap = document.createElementNS(ns, 'g');
+    wrap.dataset.name = name; wrap.dataset.depth = depth || '0';
+    wrap.style.cursor = 'pointer';
     const el = document.createElementNS(ns, 'text');
     el.setAttribute('x', x); el.setAttribute('y', y);
     el.setAttribute('text-anchor', 'middle');
@@ -164,9 +156,15 @@ function addLabels(svg) {
     else if (depth <= 3) el.setAttribute('fill', '#4E342E');
     else el.setAttribute('fill', '#1B5E20');
     el.textContent = name;
-    const wrap = document.createElementNS(ns, 'g');
-    wrap.dataset.name = name; wrap.dataset.depth = depth || '0';
+
     wrap.appendChild(el);
+    wrap.onclick = (e) => { e.stopPropagation(); toggleNode(name, svg); };
+    wrap.onmouseenter = () => { if (expandedNode !== name) el.setAttribute('fill', '#D4A017'); };
+    wrap.onmouseleave = () => { if (expandedNode !== name) {
+      if (depth <= 1) el.setAttribute('fill', '#FFFCF5');
+      else if (depth <= 3) el.setAttribute('fill', '#4E342E');
+      else el.setAttribute('fill', '#1B5E20');
+    }};
     g.appendChild(wrap);
   }
 
@@ -176,6 +174,101 @@ function addLabels(svg) {
   }
   walk(treeData);
   svg.appendChild(g);
+
+  // Root name
+  const rWrap = document.createElementNS(ns, 'g');
+  rWrap.dataset.name = 'سايل'; rWrap.style.cursor = 'pointer';
+  const rEl = document.createElementNS(ns, 'text');
+  rEl.setAttribute('x', 500); rEl.setAttribute('y', 1315);
+  rEl.setAttribute('text-anchor', 'middle'); rEl.setAttribute('dominant-baseline', 'central');
+  rEl.setAttribute('font-family', 'Traditional Arabic, Arial');
+  rEl.setAttribute('fill', '#FFFCF5'); rEl.setAttribute('font-size', '7'); rEl.setAttribute('font-weight', 'bold');
+  rEl.textContent = 'سايل';
+  rWrap.appendChild(rEl);
+  rWrap.onclick = (e) => { e.stopPropagation(); toggleNode('سايل', svg); };
+  rWrap.onmouseenter = () => { rEl.setAttribute('fill', '#FFD54F'); };
+  rWrap.onmouseleave = () => { rEl.setAttribute('fill', '#FFFCF5'); };
+  svg.appendChild(rWrap);
+}
+
+function toggleNode(name, svg) {
+  const node = findNode(treeData, name);
+  if (!node) return;
+
+  if (expandedNode === name) { collapseNode(svg); return; }
+  collapseNode(svg);
+
+  if (!node.children || node.children.length === 0) return;
+  expandedNode = name;
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const px = node._x || 500, py = node._y || 1315;
+
+  // Highlight clicked name
+  const labels = svg.querySelectorAll('#nameLabels g');
+  labels.forEach(el => {
+    if (el.dataset.name === name) {
+      const t = el.querySelector('text');
+      if (t) t.setAttribute('fill', '#FFD700');
+    }
+  });
+
+  // Show children connected by thin branches
+  const children = node.children;
+  const n = children.length;
+  const startAngle = -30;
+  const angleStep = n > 1 ? 60 / (n - 1) : 0;
+
+  children.forEach((ch, i) => {
+    const angle = (startAngle + i * angleStep) * Math.PI / 180;
+    const dist = 160 + Math.floor(i / 6) * 80;
+    const cx = px + Math.sin(angle) * dist;
+    const cy = py - Math.cos(angle) * dist * 0.7 - 40;
+
+    // Connector line (brown branch style)
+    const path = document.createElementNS(ns, 'path');
+    path.setAttribute('d', `M${px},${py-15} Q${px},${(py+cy)/2} ${cx},${cy}`);
+    path.setAttribute('stroke', '#8D6E63');
+    path.setAttribute('stroke-width', '1.5');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke-dasharray', '4,3');
+    path.setAttribute('opacity', '0.8');
+    interG.appendChild(path);
+
+    // Child name
+    const txt = document.createElementNS(ns, 'text');
+    txt.setAttribute('x', cx); txt.setAttribute('y', cy);
+    txt.setAttribute('text-anchor', 'middle'); txt.setAttribute('dominant-baseline', 'central');
+    txt.setAttribute('font-family', 'Traditional Arabic, Arial');
+    txt.setAttribute('font-size', '6.5'); txt.setAttribute('fill', '#3E2723');
+    txt.setAttribute('font-weight', 'bold');
+    txt.textContent = ch.name;
+    interG.appendChild(txt);
+
+    // If child has children, show small expand hint
+    if (ch.children && ch.children.length > 0) {
+      const hint = document.createElementNS(ns, 'text');
+      hint.setAttribute('x', cx); hint.setAttribute('y', cy + 12);
+      hint.setAttribute('text-anchor', 'middle'); hint.setAttribute('font-size', '5');
+      hint.setAttribute('fill', '#A1887F'); hint.setAttribute('font-family', 'Traditional Arabic, Arial');
+      hint.textContent = '+' + ch.children.length;
+      interG.appendChild(hint);
+    }
+  });
+}
+
+function collapseNode(svg) {
+  if (interG) interG.innerHTML = '';
+  expandedNode = null;
+  const labels = svg.querySelectorAll('#nameLabels g');
+  labels.forEach(el => {
+    const t = el.querySelector('text');
+    if (!t) return;
+    const d = parseInt(el.dataset.depth) || 0;
+    if (d <= 1) t.setAttribute('fill', '#FFFCF5');
+    else if (d <= 3) t.setAttribute('fill', '#4E342E');
+    else t.setAttribute('fill', '#1B5E20');
+  });
 }
 
 function setupViewer(container, svg) {
@@ -185,7 +278,6 @@ function setupViewer(container, svg) {
     const el = document.getElementById('zoomLevel');
     if (el) el.textContent = Math.round(1400 / vb[3] * 100) + '%';
   }
-
   container.onwheel = (e) => {
     e.preventDefault();
     const r = container.getBoundingClientRect();
@@ -193,10 +285,8 @@ function setupViewer(container, svg) {
     const f = e.deltaY > 0 ? 1.12 : 0.88;
     const nw = Math.max(300, Math.min(8000, vb[2] * f)), nh = nw * 1.4;
     const cx = vb[0] + mx * vb[2], cy = vb[1] + my * vb[3];
-    vb[0] = cx - mx * nw; vb[1] = cy - my * nh;
-    vb[2] = nw; vb[3] = nh; update();
+    vb[0] = cx - mx * nw; vb[1] = cy - my * nh; vb[2] = nw; vb[3] = nh; update();
   };
-
   let pan = false, px, py, vbx, vby;
   container.onmousedown = (e) => { pan = true; px = e.clientX; py = e.clientY; vbx = vb[0]; vby = vb[1]; container.style.cursor = 'grabbing'; };
   window.onmousemove = (e) => { if (!pan) return; vb[0] = vbx - (e.clientX - px) / container.clientWidth * vb[2]; vb[1] = vby - (e.clientY - py) / container.clientHeight * vb[3]; update(); };
@@ -204,7 +294,7 @@ function setupViewer(container, svg) {
   container.ontouchstart = (e) => { if (e.touches.length === 1) { pan = true; px = e.touches[0].clientX; py = e.touches[0].clientY; vbx = vb[0]; vby = vb[1]; } };
   container.ontouchmove = (e) => { if (pan && e.touches.length === 1) { vb[0] = vbx - (e.touches[0].clientX - px) / container.clientWidth * vb[2]; vb[1] = vby - (e.touches[0].clientY - py) / container.clientHeight * vb[3]; update(); } };
   container.ontouchend = () => { pan = false; };
-
+  container.onclick = () => { if (expandedNode) collapseNode(svg); };
   window.zoomIn = () => { vb[2] /= 1.4; vb[3] /= 1.4; update(); };
   window.zoomOut = () => { vb[2] *= 1.4; vb[3] *= 1.4; update(); };
   window.resetView = () => { vb[0]=0; vb[1]=0; vb[2]=1000; vb[3]=1400; update(); };
