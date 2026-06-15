@@ -42,9 +42,9 @@ function filterTree(n, t) {
   return (m || f.length > 0) ? { ...n, children: f } : null;
 }
 
-// Exact positions from tree.svg design elements
-const TRUNK = [[500,1260],[500,1222],[500,1184],[500,1146],[500,1108],[500,1070],[500,1032]];
-const FRUIT = [
+// Exact design element positions from tree.svg (copied verbatim from design coordinates)
+const TRUNK_POS = [[500,1260],[500,1222],[500,1184],[500,1146],[500,1108],[500,1070],[500,1032]];
+const FRUIT_POS = [
   [120,800],[85,710],[880,800],[915,710],
   [150,600],[105,490],[85,390],[850,600],[895,490],[915,390],
   [230,300],[295,200],[350,160],[770,300],[705,200],[650,160],
@@ -53,17 +53,33 @@ const FRUIT = [
   [250,780],[350,680],[450,600],[750,780],[650,680],[550,600],
   [300,580],[700,580],[380,460],[620,460],[420,360],[580,360]
 ];
+const LEAF_POS = [
+  // Dark leaves (46)
+  [150,950],[120,870],[85,800],[55,740],[48,630],[100,680],[160,1000],[200,900],[140,900],[80,850],
+  [850,950],[880,870],[915,800],[945,740],[952,630],[900,680],[840,1000],[800,900],[860,900],[920,850],
+  [150,600],[105,490],[85,390],[210,705],[175,605],[145,505],
+  [850,600],[895,490],[915,390],[790,705],[825,605],[855,505],
+  [230,300],[295,200],[350,160],[770,300],[705,200],[650,160],[492,210],[508,210],
+  [300,700],[700,700],[350,550],[650,550],[400,400],[600,400],
+  // Light leaves (24)
+  [180,1000],[140,920],[100,840],[70,770],
+  [820,1000],[860,920],[900,840],[930,770],
+  [165,640],[120,530],[835,640],[880,530],
+  [245,340],[305,230],[755,340],[695,230],
+  [490,240],[510,240]
+];
 
 function assignPositions(root) {
-  let ti = 0, fi = 0;
+  let ti = 0, fi = 0, li = 0;
   function walk(n) {
     if (!n) return;
     if (n.name === 'سايل') { n._x = 500; n._y = 1315; }
     if (!n.children) return;
     for (const ch of n.children) {
-      if (ch.depth === 1 && ti < TRUNK.length) { ch._x = TRUNK[ti][0]; ch._y = TRUNK[ti][1]; ti++; }
-      else if (fi < FRUIT.length) { ch._x = FRUIT[fi][0]; ch._y = FRUIT[fi][1]; fi++; }
-      else { ch._x = 300 + Math.random()*400; ch._y = 350 + Math.random()*500; }
+      if (ch.depth === 1 && ti < TRUNK_POS.length) { ch._x = TRUNK_POS[ti][0]; ch._y = TRUNK_POS[ti][1]; ti++; }
+      else if (fi < FRUIT_POS.length && ch.depth <= 3) { ch._x = FRUIT_POS[fi][0]; ch._y = FRUIT_POS[fi][1]; fi++; }
+      else if (li < LEAF_POS.length) { ch._x = LEAF_POS[li][0]; ch._y = LEAF_POS[li][1]; li++; }
+      else { ch._x = 200 + Math.random()*600; ch._y = 300 + Math.random()*600; }
       walk(ch);
     }
   }
@@ -106,61 +122,55 @@ async function loadSvg() {
   container.innerHTML = '<svg viewBox="0 0 1000 1400" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"></svg>';
   const svg = container.querySelector('svg');
 
-  // Load tree.svg content and inject into our SVG
   const r = await fetch('tree.svg?t=' + Date.now());
   const txt = await r.text();
-  // Extract everything inside <svg ...> ... </svg>
   const m = txt.match(/<svg[^>]*>([\s\S]*)<\/svg>/i);
-  if (m) {
-    svg.innerHTML = m[1];
-  } else {
-    svg.innerHTML = txt;
-  }
+  svg.innerHTML = m ? m[1] : txt;
 
-  // Update info text
-  const total = count(treeData);
-  const depth = maxDepth(treeData);
+  const total = count(treeData), depth = maxDepth(treeData);
   svg.querySelectorAll('text').forEach(t => {
     if (t.textContent.includes('إجمالي')) t.textContent = 'إجمالي أفراد العائلة: ' + total + ' فرداً';
     if (t.textContent.includes('Family Tree')) t.textContent = depth + ' أجيال · ' + total + ' فرداً';
   });
 
-  // Add name labels
-  addNameLabels(svg);
-
-  // Setup interaction
+  addLabels(svg);
   setupViewer(container, svg);
 }
 
-function addNameLabels(svg) {
-  function add(name, x, y, depth) {
-    const ns = 'http://www.w3.org/2000/svg';
+function addLabels(svg) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const overlay = document.createElementNS(ns, 'g');
+  overlay.id = 'nameLabels';
+
+  function label(name, x, y, depth) {
     const g = document.createElementNS(ns, 'g');
     g.dataset.name = name; g.dataset.depth = depth || '0';
-
     const txt = document.createElementNS(ns, 'text');
     txt.setAttribute('x', x); txt.setAttribute('y', y);
     txt.setAttribute('text-anchor', 'middle');
     txt.setAttribute('dominant-baseline', 'central');
     txt.setAttribute('font-family', 'Traditional Arabic, Arial');
-    txt.setAttribute('fill', depth <= 1 ? '#FFFCF5' : '#3E2723');
-    txt.setAttribute('font-size', depth <= 1 ? '9' : '8');
-    txt.setAttribute('font-weight', 'bold');
+    txt.setAttribute('font-size', depth <= 1 ? '9' : '7.5');
+    txt.setAttribute('font-weight', depth <= 1 ? 'bold' : 'normal');
+    // Trunk (plaques) = white/gold, leaves = dark green, fruits = saddlebrown
+    if (depth <= 1) txt.setAttribute('fill', '#FFFCF5');
+    else if (depth >= 4) txt.setAttribute('fill', '#1B5E20');
+    else txt.setAttribute('fill', '#4E342E');
     txt.textContent = name;
     g.appendChild(txt);
-    svg.appendChild(g);
+    overlay.appendChild(g);
   }
 
   function walk(n) {
-    if (n.name !== 'سايل' && n._x && n._y) add(n.name, n._x, n._y, n.depth);
+    if (n.name !== 'سايل' && n._x && n._y) label(n.name, n._x, n._y, n.depth);
     if (n.children) n.children.forEach(walk);
   }
   walk(treeData);
+  svg.appendChild(overlay);
 }
 
 function setupViewer(container, svg) {
   const vb = [0, 0, 1000, 1400];
-
   function update() {
     svg.setAttribute('viewBox', vb.join(' '));
     const el = document.getElementById('zoomLevel');
@@ -179,19 +189,9 @@ function setupViewer(container, svg) {
   };
 
   let pan = false, px, py, vbx, vby;
-  container.onmousedown = (e) => {
-    pan = true; px = e.clientX; py = e.clientY;
-    vbx = vb[0]; vby = vb[1];
-    container.style.cursor = 'grabbing';
-  };
-  window.onmousemove = (e) => {
-    if (!pan) return;
-    vb[0] = vbx - (e.clientX - px) / container.clientWidth * vb[2];
-    vb[1] = vby - (e.clientY - py) / container.clientHeight * vb[3];
-    update();
-  };
+  container.onmousedown = (e) => { pan = true; px = e.clientX; py = e.clientY; vbx = vb[0]; vby = vb[1]; container.style.cursor = 'grabbing'; };
+  window.onmousemove = (e) => { if (!pan) return; vb[0] = vbx - (e.clientX - px) / container.clientWidth * vb[2]; vb[1] = vby - (e.clientY - py) / container.clientHeight * vb[3]; update(); };
   window.onmouseup = () => { pan = false; container.style.cursor = 'grab'; };
-
   container.ontouchstart = (e) => { if (e.touches.length === 1) { pan = true; px = e.touches[0].clientX; py = e.touches[0].clientY; vbx = vb[0]; vby = vb[1]; } };
   container.ontouchmove = (e) => { if (pan && e.touches.length === 1) { vb[0] = vbx - (e.touches[0].clientX - px) / container.clientWidth * vb[2]; vb[1] = vby - (e.touches[0].clientY - py) / container.clientHeight * vb[3]; update(); } };
   container.ontouchend = () => { pan = false; };
@@ -208,21 +208,12 @@ function performSearch() {
   if (!term || !treeData) return;
   const r = allNames(filterTree(treeData, term));
   const sb = document.getElementById('statusBar');
-  if (r.length > 1) {
-    sb.textContent = '🔍 ' + (r.length - 1) + ' نتيجة';
-    sb.className = 'status-bar search';
-  } else {
-    sb.textContent = '🔍 لا توجد نتائج';
-    sb.className = 'status-bar error';
-  }
-
-  document.querySelectorAll('#treeView svg g').forEach(el => {
-    const name = el.dataset.name;
-    if (!name) return;
-    const match = name === term;
-    el.style.opacity = (!term || match) ? '1' : '0.12';
-    el.style.fontWeight = match ? 'bold' : 'normal';
-    if (match) el.style.filter = 'drop-shadow(0 0 4px gold)';
+  if (r.length > 1) { sb.textContent = '🔍 ' + (r.length - 1) + ' نتيجة'; sb.className = 'status-bar search'; }
+  else { sb.textContent = '🔍 لا توجد نتائج'; sb.className = 'status-bar error'; }
+  document.querySelectorAll('#nameLabels g').forEach(el => {
+    const m = el.dataset.name === term;
+    el.style.opacity = (!term || m) ? '1' : '0.1';
+    if (m) el.style.filter = 'drop-shadow(0 0 5px #FFD700)';
     else el.style.filter = 'none';
   });
 }
@@ -230,24 +221,17 @@ function performSearch() {
 document.addEventListener('DOMContentLoaded', () => {
   loadData();
   setInterval(loadData, REFRESH_MS);
-
   document.getElementById('searchBtn').onclick = performSearch;
   document.getElementById('searchInput').onkeyup = (e) => {
     if (e.key === 'Enter') performSearch();
     if (!e.target.value) {
-      document.querySelectorAll('#treeView svg g').forEach(el => {
-        el.style.opacity = '1'; el.style.fontWeight = '';
-      });
-      document.getElementById('statusBar').textContent = '✓';
-      document.getElementById('statusBar').className = 'status-bar success';
+      document.querySelectorAll('#nameLabels g').forEach(el => { el.style.opacity = '1'; el.style.filter = 'none'; });
+      document.getElementById('statusBar').textContent = '✓'; document.getElementById('statusBar').className = 'status-bar success';
     }
   };
   document.getElementById('zoomInBtn').onclick = () => window.zoomIn && window.zoomIn();
   document.getElementById('zoomOutBtn').onclick = () => window.zoomOut && window.zoomOut();
   document.getElementById('resetBtn').onclick = () => window.resetView && window.resetView();
   document.getElementById('refreshBtn').onclick = loadData;
-  document.getElementById('fullscreenBtn').onclick = () => {
-    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-    else document.exitFullscreen();
-  };
+  document.getElementById('fullscreenBtn').onclick = () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); };
 });
