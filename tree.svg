@@ -1,0 +1,671 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1400" width="1000" height="1400">
+  <defs>
+    <!-- Background -->
+    <radialGradient id="bgGlow" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#FFFCF5"/>
+      <stop offset="100%" stop-color="#F5EDE0"/>
+    </radialGradient>
+
+    <!-- Wood gradients -->
+    <linearGradient id="woodDark" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3E2723"/>
+      <stop offset="40%" stop-color="#4E342E"/>
+      <stop offset="70%" stop-color="#5D4037"/>
+      <stop offset="100%" stop-color="#3E2723"/>
+    </linearGradient>
+    <linearGradient id="woodLight" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#5D4037"/>
+      <stop offset="30%" stop-color="#8D6E63"/>
+      <stop offset="60%" stop-color="#A1887F"/>
+      <stop offset="100%" stop-color="#5D4037"/>
+    </linearGradient>
+
+    <!-- Gold gear gradient -->
+    <radialGradient id="goldGrad" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#FFE082"/>
+      <stop offset="40%" stop-color="#FFD54F"/>
+      <stop offset="70%" stop-color="#D4A017"/>
+      <stop offset="100%" stop-color="#B8860B"/>
+    </radialGradient>
+
+    <!-- Leaf gradients -->
+    <linearGradient id="leafDarkGrad" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#1B5E20"/>
+      <stop offset="100%" stop-color="#2E7D32"/>
+    </linearGradient>
+    <linearGradient id="leafMidGrad" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#2E7D32"/>
+      <stop offset="100%" stop-color="#4CAF50"/>
+    </linearGradient>
+    <linearGradient id="leafLightGrad" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#4CAF50"/>
+      <stop offset="100%" stop-color="#81C784"/>
+    </linearGradient>
+
+    <!-- Global shadow -->
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="2" dy="4" stdDeviation="5" flood-color="rgba(0,0,0,0.12)"/>
+    </filter>
+    <filter id="gearGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="rgba(212,160,23,0.3)"/>
+    </filter>
+
+    <!-- Ground shadow -->
+    <radialGradient id="groundShadow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(0,0,0,0.15)"/>
+      <stop offset="60%" stop-color="rgba(0,0,0,0.04)"/>
+      <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+    </radialGradient>
+
+    <!-- ====== COMPONENTS ====== -->
+
+    <!-- Golden Gear with sharp teeth -->
+    <g id="gold-gear">
+      <!-- 12 sharp teeth as protruding circles -->
+      <circle cx="0" cy="-16.5" r="4" fill="url(#goldGrad)"/>
+      <circle cx="8.3" cy="-14.3" r="4" fill="url(#goldGrad)"/>
+      <circle cx="14.3" cy="-8.3" r="4" fill="url(#goldGrad)"/>
+      <circle cx="16.5" cy="0" r="4" fill="url(#goldGrad)"/>
+      <circle cx="14.3" cy="8.3" r="4" fill="url(#goldGrad)"/>
+      <circle cx="8.3" cy="14.3" r="4" fill="url(#goldGrad)"/>
+      <circle cx="0" cy="16.5" r="4" fill="url(#goldGrad)"/>
+      <circle cx="-8.3" cy="14.3" r="4" fill="url(#goldGrad)"/>
+      <circle cx="-14.3" cy="8.3" r="4" fill="url(#goldGrad)"/>
+      <circle cx="-16.5" cy="0" r="4" fill="url(#goldGrad)"/>
+      <circle cx="-14.3" cy="-8.3" r="4" fill="url(#goldGrad)"/>
+      <circle cx="-8.3" cy="-14.3" r="4" fill="url(#goldGrad)"/>
+      <!-- Main gear body -->
+      <circle cx="0" cy="0" r="13" fill="url(#goldGrad)" stroke="#B8860B" stroke-width="1.5"/>
+      <!-- Inner ring detail -->
+      <circle cx="0" cy="0" r="7.5" fill="none" stroke="#B8860B" stroke-width="0.5" opacity="0.4"/>
+      <!-- Center hole -->
+      <circle cx="0" cy="0" r="2.5" fill="#B8860B"/>
+      <!-- Highlight -->
+      <ellipse cx="-4" cy="-5" rx="5" ry="4" fill="rgba(255,255,255,0.25)"/>
+    </g>
+
+    <!-- White fruit circle -->
+    <g id="white-fruit">
+      <circle cx="0" cy="0" r="8" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1.2" filter="url(#softShadow)"/>
+      <circle cx="-2.5" cy="-2.5" r="3" fill="rgba(200,200,200,0.15)"/>
+    </g>
+    <g id="white-fruit-sm">
+      <circle cx="0" cy="0" r="5.5" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1" filter="url(#softShadow)"/>
+      <circle cx="-1.5" cy="-1.5" r="2" fill="rgba(200,200,200,0.15)"/>
+    </g>
+
+    <!-- Oval plaque for trunk -->
+    <g id="plaque">
+      <ellipse cx="0" cy="0" rx="20" ry="11" fill="#4E342E" stroke="#8D6E63" stroke-width="1.5"/>
+      <ellipse cx="0" cy="0" rx="17" ry="8.5" fill="none" stroke="#A1887F" stroke-width="0.5" opacity="0.4"/>
+      <ellipse cx="0" cy="0" rx="20" ry="11" fill="none" stroke="#3E2723" stroke-width="3" opacity="0.3"/>
+    </g>
+
+    <!-- ====== LEAF SHAPES ====== -->
+
+    <!-- Dark green leaf (back layer) -->
+    <g id="leaf-dark">
+      <path d="M0,0 C-7,-5 -9,-15 -3,-21 C3,-15 5,-7 0,0 Z" fill="url(#leafDarkGrad)"/>
+    </g>
+
+    <!-- Mid green leaf (middle layer) -->
+    <g id="leaf-mid">
+      <path d="M0,0 C-8,-6 -10,-16 -3,-22 C4,-16 6,-7 0,0 Z" fill="url(#leafMidGrad)"/>
+      <path d="M0,0 L0,-19" stroke="#1B5E20" stroke-width="0.5" fill="none" opacity="0.25"/>
+    </g>
+
+    <!-- Light green leaf (front layer, sunlit) -->
+    <g id="leaf-light">
+      <path d="M0,0 C-7,-5 -8,-15 -2,-20 C4,-15 5,-6 0,0 Z" fill="url(#leafLightGrad)"/>
+      <path d="M0,0 L0,-17" stroke="#2E7D32" stroke-width="0.5" fill="none" opacity="0.2"/>
+    </g>
+
+    <!-- ====== LEAF CLUSTERS ====== -->
+
+    <!-- Cluster pointing up (center) -->
+    <g id="cluster-center">
+      <use href="#leaf-dark" transform="translate(0,0) rotate(-12) scale(0.9)"/>
+      <use href="#leaf-dark" transform="translate(0,0) rotate(12) scale(0.9)"/>
+      <use href="#leaf-mid" transform="translate(0,0) rotate(-6) scale(1)"/>
+      <use href="#leaf-mid" transform="translate(0,0) rotate(6) scale(1)"/>
+      <use href="#leaf-light" transform="translate(0,0) rotate(0) scale(1.05)"/>
+    </g>
+
+    <!-- Cluster pointing right-up (right side) -->
+    <g id="cluster-right">
+      <use href="#leaf-dark" transform="translate(0,0) rotate(25) scale(0.9)"/>
+      <use href="#leaf-dark" transform="translate(0,0) rotate(45) scale(0.9)"/>
+      <use href="#leaf-mid" transform="translate(0,0) rotate(30) scale(1)"/>
+      <use href="#leaf-mid" transform="translate(0,0) rotate(50) scale(1)"/>
+      <use href="#leaf-light" transform="translate(0,0) rotate(40) scale(1.05)"/>
+    </g>
+
+    <!-- Cluster pointing left-up (left side) -->
+    <g id="cluster-left">
+      <use href="#leaf-dark" transform="translate(0,0) rotate(-25) scale(0.9)"/>
+      <use href="#leaf-dark" transform="translate(0,0) rotate(-45) scale(0.9)"/>
+      <use href="#leaf-mid" transform="translate(0,0) rotate(-30) scale(1)"/>
+      <use href="#leaf-mid" transform="translate(0,0) rotate(-50) scale(1)"/>
+      <use href="#leaf-light" transform="translate(0,0) rotate(-40) scale(1.05)"/>
+    </g>
+
+    <!-- Extra small cluster (tips) -->
+    <g id="cluster-tip">
+      <use href="#leaf-light" transform="translate(0,0) rotate(-5) scale(0.85)"/>
+      <use href="#leaf-light" transform="translate(0,0) rotate(10) scale(0.85)"/>
+      <use href="#leaf-light" transform="translate(0,0) rotate(15) scale(0.8)"/>
+    </g>
+  </defs>
+
+  <!-- ===== BACKGROUND ===== -->
+  <rect width="1000" height="1400" fill="url(#bgGlow)"/>
+
+  <!-- Decorative frame -->
+  <rect x="15" y="15" width="970" height="1370" rx="6" fill="none" stroke="#C4A882" stroke-width="1.5" opacity="0.4"/>
+  <rect x="22" y="22" width="956" height="1356" rx="4" fill="none" stroke="#C4A882" stroke-width="0.8" opacity="0.2"/>
+
+  <!-- ===== GROUND ===== -->
+  <ellipse cx="500" cy="1320" rx="340" ry="35" fill="url(#groundShadow)"/>
+  <path d="M180,1315 Q500,1325 820,1315" stroke="#8B7355" stroke-width="1" fill="none" opacity="0.3"/>
+
+  <!-- Grass blades -->
+  <g opacity="0.35">
+    <path d="M320,1318 Q318,1305 315,1295" stroke="#388E3C" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M350,1320 Q348,1308 345,1298" stroke="#43A047" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M470,1322 Q468,1310 466,1300" stroke="#388E3C" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M530,1322 Q532,1310 534,1300" stroke="#43A047" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M640,1320 Q642,1308 645,1298" stroke="#388E3C" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M670,1318 Q672,1305 675,1295" stroke="#43A047" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- ===== TRUNK ===== -->
+  <!-- Main trunk shape -->
+  <path d="M465,1315 Q470,1250 472,1150 Q474,1080 476,1000 L524,1000 Q526,1080 528,1150 Q530,1250 535,1315 Z" fill="url(#woodDark)" filter="url(#softShadow)"/>
+
+  <!-- Trunk wood texture lines -->
+  <path d="M475,1310 Q477,1260 478,1210 Q479,1160 480,1110 Q481,1060 482,1010" stroke="#3E2723" stroke-width="1.5" fill="none" opacity="0.25"/>
+  <path d="M488,1315 Q489,1265 490,1215 Q491,1165 492,1115 Q493,1065 494,1015" stroke="#3E2723" stroke-width="1" fill="none" opacity="0.15"/>
+  <path d="M512,1315 Q511,1265 510,1215 Q509,1165 508,1115 Q507,1065 506,1015" stroke="#3E2723" stroke-width="1" fill="none" opacity="0.15"/>
+  <path d="M525,1310 Q523,1260 522,1210 Q521,1160 520,1110 Q519,1060 518,1010" stroke="#3E2723" stroke-width="1.5" fill="none" opacity="0.25"/>
+
+  <!-- Wood knot on trunk -->
+  <ellipse cx="498" cy="1200" rx="5" ry="7" fill="#3E2723" opacity="0.4"/>
+  <ellipse cx="498" cy="1200" rx="2.5" ry="3.5" fill="#2C1A12" opacity="0.3"/>
+
+  <!-- ===== 7 OVAL PLAQUES ON TRUNK (decreasing upward) ===== -->
+  <g filter="url(#softShadow)">
+    <!-- Plaque 1 (bottom, largest) -->
+    <g transform="translate(500, 1260)">
+      <ellipse cx="0" cy="0" rx="24" ry="13" fill="#4E342E" stroke="#8D6E63" stroke-width="1.5"/>
+      <ellipse cx="0" cy="0" rx="20" ry="10" fill="none" stroke="#A1887F" stroke-width="0.5" opacity="0.4"/>
+      <ellipse cx="0" cy="0" rx="24" ry="13" fill="none" stroke="#3E2723" stroke-width="2.5" opacity="0.3"/>
+    </g>
+    <!-- Plaque 2 -->
+    <g transform="translate(500, 1222)">
+      <ellipse cx="0" cy="0" rx="22" ry="12" fill="#4E342E" stroke="#8D6E63" stroke-width="1.5"/>
+      <ellipse cx="0" cy="0" rx="18" ry="9" fill="none" stroke="#A1887F" stroke-width="0.5" opacity="0.4"/>
+      <ellipse cx="0" cy="0" rx="22" ry="12" fill="none" stroke="#3E2723" stroke-width="2.5" opacity="0.3"/>
+    </g>
+    <!-- Plaque 3 -->
+    <g transform="translate(500, 1184)">
+      <ellipse cx="0" cy="0" rx="20" ry="11" fill="#4E342E" stroke="#8D6E63" stroke-width="1.5"/>
+      <ellipse cx="0" cy="0" rx="16" ry="8" fill="none" stroke="#A1887F" stroke-width="0.5" opacity="0.4"/>
+      <ellipse cx="0" cy="0" rx="20" ry="11" fill="none" stroke="#3E2723" stroke-width="2" opacity="0.3"/>
+    </g>
+    <!-- Plaque 4 -->
+    <g transform="translate(500, 1146)">
+      <ellipse cx="0" cy="0" rx="18" ry="10" fill="#4E342E" stroke="#8D6E63" stroke-width="1.5"/>
+      <ellipse cx="0" cy="0" rx="14" ry="7" fill="none" stroke="#A1887F" stroke-width="0.5" opacity="0.4"/>
+      <ellipse cx="0" cy="0" rx="18" ry="10" fill="none" stroke="#3E2723" stroke-width="2" opacity="0.3"/>
+    </g>
+    <!-- Plaque 5 -->
+    <g transform="translate(500, 1108)">
+      <ellipse cx="0" cy="0" rx="16" ry="9" fill="#4E342E" stroke="#8D6E63" stroke-width="1.5"/>
+      <ellipse cx="0" cy="0" rx="12" ry="6" fill="none" stroke="#A1887F" stroke-width="0.5" opacity="0.4"/>
+      <ellipse cx="0" cy="0" rx="16" ry="9" fill="none" stroke="#3E2723" stroke-width="2" opacity="0.3"/>
+    </g>
+    <!-- Plaque 6 -->
+    <g transform="translate(500, 1070)">
+      <ellipse cx="0" cy="0" rx="14" ry="8" fill="#4E342E" stroke="#8D6E63" stroke-width="1.5"/>
+      <ellipse cx="0" cy="0" rx="10" ry="5" fill="none" stroke="#A1887F" stroke-width="0.5" opacity="0.4"/>
+      <ellipse cx="0" cy="0" rx="14" ry="8" fill="none" stroke="#3E2723" stroke-width="1.5" opacity="0.3"/>
+    </g>
+    <!-- Plaque 7 (top, smallest) -->
+    <g transform="translate(500, 1032)">
+      <ellipse cx="0" cy="0" rx="12" ry="7" fill="#4E342E" stroke="#8D6E63" stroke-width="1.5"/>
+      <ellipse cx="0" cy="0" rx="8" ry="4" fill="none" stroke="#A1887F" stroke-width="0.5" opacity="0.4"/>
+      <ellipse cx="0" cy="0" rx="12" ry="7" fill="none" stroke="#3E2723" stroke-width="1.5" opacity="0.3"/>
+    </g>
+  </g>
+
+  <!-- ===== ROOTS ===== -->
+  <g opacity="0.85">
+    <path d="M470,1315 Q440,1325 400,1328 Q360,1330 310,1320" stroke="#4E342E" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <path d="M470,1315 Q435,1330 390,1335 Q350,1338 300,1325" stroke="#3E2723" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.6"/>
+    <path d="M478,1312 Q460,1320 440,1318 Q420,1315 400,1308" stroke="#5D4037" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.7"/>
+    <path d="M530,1315 Q560,1325 600,1328 Q640,1330 690,1320" stroke="#4E342E" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <path d="M530,1315 Q565,1330 610,1335 Q650,1338 700,1325" stroke="#3E2723" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.6"/>
+    <path d="M522,1312 Q540,1320 560,1318 Q580,1315 600,1308" stroke="#5D4037" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.7"/>
+  </g>
+
+  <!-- ===== TWO CENTRAL VERTICAL BRANCHES ===== -->
+
+  <!-- Left central branch (from trunk split at y=1000 to top at y=200) -->
+  <path d="M480,1000 Q481,700 482,250 L490,250 Q489,700 488,1000 Z" fill="url(#woodLight)" filter="url(#softShadow)"/>
+
+  <!-- Right central branch -->
+  <path d="M520,1000 Q519,700 518,250 L510,250 Q511,700 512,1000 Z" fill="url(#woodLight)" filter="url(#softShadow)"/>
+
+  <!-- ===== LOWER BRANCHES (dip down then curve up at 45-60°) ===== -->
+
+  <!-- Lower Left 1 -->
+  <path d="M475,1020 C440,1080 280,1120 180,950 C130,870 120,830 120,800" stroke="url(#woodLight)" stroke-width="11" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+  <path d="M120,800 C120,830 130,870 180,950 C280,1120 440,1080 475,1020" stroke="url(#woodDark)" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.4" transform="translate(0,1)"/>
+
+  <!-- Lower Left 2 -->
+  <path d="M470,1040 C430,1100 220,1160 130,860 C100,780 90,740 85,710" stroke="url(#woodLight)" stroke-width="9" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+  <path d="M85,710 C90,740 100,780 130,860 C220,1160 430,1100 470,1040" stroke="url(#woodDark)" stroke-width="6.5" fill="none" stroke-linecap="round" opacity="0.4" transform="translate(0,1)"/>
+
+  <!-- Lower Left 3 -->
+  <path d="M465,1060 C400,1140 170,1180 80,770 C55,700 50,660 48,630" stroke="url(#woodLight)" stroke-width="7" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+  <path d="M48,630 C50,660 55,700 80,770 C170,1180 400,1140 465,1060" stroke="url(#woodDark)" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.4" transform="translate(0,1)"/>
+
+  <!-- Lower Right 1 (mirror) -->
+  <path d="M525,1020 C560,1080 720,1120 820,950 C870,870 880,830 880,800" stroke="url(#woodLight)" stroke-width="11" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+  <path d="M880,800 C880,830 870,870 820,950 C720,1120 560,1080 525,1020" stroke="url(#woodDark)" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.4" transform="translate(0,1)"/>
+
+  <!-- Lower Right 2 -->
+  <path d="M530,1040 C570,1100 780,1160 870,860 C900,780 910,740 915,710" stroke="url(#woodLight)" stroke-width="9" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+  <path d="M915,710 C910,740 900,780 870,860 C780,1160 570,1100 530,1040" stroke="url(#woodDark)" stroke-width="6.5" fill="none" stroke-linecap="round" opacity="0.4" transform="translate(0,1)"/>
+
+  <!-- Lower Right 3 -->
+  <path d="M535,1060 C600,1140 830,1180 920,770 C945,700 950,660 952,630" stroke="url(#woodLight)" stroke-width="7" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+  <path d="M952,630 C950,660 945,700 920,770 C830,1180 600,1140 535,1060" stroke="url(#woodDark)" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.4" transform="translate(0,1)"/>
+
+  <!-- ===== MIDDLE BRANCHES (S-curves, 90° to sides) ===== -->
+
+  <!-- Middle Left 1 (S-curve) -->
+  <path d="M480,830 C460,810 380,780 300,740 C240,710 180,670 150,600" stroke="url(#woodLight)" stroke-width="8" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+  <path d="M150,600 C180,670 240,710 300,740 C380,780 460,810 480,830" stroke="url(#woodDark)" stroke-width="5.5" fill="none" stroke-linecap="round" opacity="0.4" transform="translate(0,1)"/>
+
+  <!-- Middle Left 2 (S-curve) -->
+  <path d="M478,750 C450,730 350,690 260,640 C190,600 130,550 105,490" stroke="url(#woodLight)" stroke-width="6.5" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+
+  <!-- Middle Left 3 (S-curve) -->
+  <path d="M476,670 C440,650 320,600 220,540 C150,500 100,450 85,390" stroke="url(#woodLight)" stroke-width="5" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+
+  <!-- Middle Right 1 (S-curve) -->
+  <path d="M520,830 C540,810 620,780 700,740 C760,710 820,670 850,600" stroke="url(#woodLight)" stroke-width="8" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+  <path d="M850,600 C820,670 760,710 700,740 C620,780 540,810 520,830" stroke="url(#woodDark)" stroke-width="5.5" fill="none" stroke-linecap="round" opacity="0.4" transform="translate(0,1)"/>
+
+  <!-- Middle Right 2 (S-curve) -->
+  <path d="M522,750 C550,730 650,690 740,640 C810,600 870,550 895,490" stroke="url(#woodLight)" stroke-width="6.5" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+
+  <!-- Middle Right 3 (S-curve) -->
+  <path d="M524,670 C560,650 680,600 780,540 C850,500 900,450 915,390" stroke="url(#woodLight)" stroke-width="5" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+
+  <!-- ===== UPPER BRANCHES (narrow angle ~30°) ===== -->
+
+  <!-- Upper Left 1 -->
+  <path d="M482,530 C460,500 400,440 320,370 C280,335 250,315 230,300" stroke="url(#woodLight)" stroke-width="5" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+
+  <!-- Upper Left 2 -->
+  <path d="M484,420 C470,390 420,340 360,270 C330,235 310,215 295,200" stroke="url(#woodLight)" stroke-width="4" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+
+  <!-- Upper Left 3 -->
+  <path d="M485,330 C475,305 440,265 395,210 C375,185 360,170 350,160" stroke="url(#woodLight)" stroke-width="3.5" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+
+  <!-- Upper Right 1 -->
+  <path d="M518,530 C540,500 600,440 680,370 C720,335 750,315 770,300" stroke="url(#woodLight)" stroke-width="5" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+
+  <!-- Upper Right 2 -->
+  <path d="M516,420 C530,390 580,340 640,270 C670,235 690,215 705,200" stroke="url(#woodLight)" stroke-width="4" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+
+  <!-- Upper Right 3 -->
+  <path d="M515,330 C525,305 560,265 605,210 C625,185 640,170 650,160" stroke="url(#woodLight)" stroke-width="3.5" fill="none" stroke-linecap="round" filter="url(#softShadow)"/>
+
+  <!-- ===== TOP TERMINAL BRANCHES ===== -->
+  <path d="M486,300 C488,270 490,240 492,210" stroke="url(#woodLight)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <path d="M514,300 C512,270 510,240 508,210" stroke="url(#woodLight)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+
+  <!-- ===== SUB-BRANCHES (smaller twigs) ===== -->
+  <g opacity="0.6">
+    <!-- Sub-branches on lower left -->
+    <path d="M280,1120 C250,1050 220,1020 180,1000" stroke="#6D4C41" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M200,1000 C180,980 160,970 140,965" stroke="#6D4C41" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M220,1160 C190,1100 160,1070 130,1050" stroke="#6D4C41" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M150,800 C130,780 110,770 95,765" stroke="#6D4C41" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+    <!-- Sub-branches on lower right -->
+    <path d="M720,1120 C750,1050 780,1020 820,1000" stroke="#6D4C41" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M800,1000 C820,980 840,970 860,965" stroke="#6D4C41" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M780,1160 C810,1100 840,1070 870,1050" stroke="#6D4C41" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M850,800 C870,780 890,770 905,765" stroke="#6D4C41" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+    <!-- Sub-branches on middle left -->
+    <path d="M300,740 C270,720 240,710 210,705" stroke="#6D4C41" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M260,640 C230,620 200,610 175,605" stroke="#6D4C41" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M220,540 C190,520 165,510 145,505" stroke="#6D4C41" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+    <!-- Sub-branches on middle right -->
+    <path d="M700,740 C730,720 760,710 790,705" stroke="#6D4C41" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M740,640 C770,620 800,610 825,605" stroke="#6D4C41" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M780,540 C810,520 835,510 855,505" stroke="#6D4C41" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- ===== GOLDEN GEAR CIRCLES ON CENTRAL BRANCHES ===== -->
+
+  <!-- Left central branch gears -->
+  <g filter="url(#gearGlow)">
+    <use href="#gold-gear" x="483" y="960"/>
+    <use href="#gold-gear" x="483" y="890"/>
+    <use href="#gold-gear" x="483" y="820"/>
+    <use href="#gold-gear" x="483" y="750"/>
+    <use href="#gold-gear" x="483" y="680"/>
+    <use href="#gold-gear" x="483" y="610"/>
+    <use href="#gold-gear" x="483" y="540"/>
+    <use href="#gold-gear" x="483" y="470"/>
+    <use href="#gold-gear" x="483" y="400"/>
+    <use href="#gold-gear" x="483" y="330"/>
+    <use href="#gold-gear" x="483" y="260"/>
+  </g>
+
+  <!-- Right central branch gears -->
+  <g filter="url(#gearGlow)">
+    <use href="#gold-gear" x="517" y="960"/>
+    <use href="#gold-gear" x="517" y="890"/>
+    <use href="#gold-gear" x="517" y="820"/>
+    <use href="#gold-gear" x="517" y="750"/>
+    <use href="#gold-gear" x="517" y="680"/>
+    <use href="#gold-gear" x="517" y="610"/>
+    <use href="#gold-gear" x="517" y="540"/>
+    <use href="#gold-gear" x="517" y="470"/>
+    <use href="#gold-gear" x="517" y="400"/>
+    <use href="#gold-gear" x="517" y="330"/>
+    <use href="#gold-gear" x="517" y="260"/>
+  </g>
+
+  <!-- ===== DARK GREEN LEAF LAYER (back/deep shadow) ===== -->
+  <g opacity="0.85">
+    <!-- Lower left canopy back -->
+    <use href="#leaf-dark" transform="translate(150,950) rotate(50) scale(1.2)"/>
+    <use href="#leaf-dark" transform="translate(120,870) rotate(55) scale(1.1)"/>
+    <use href="#leaf-dark" transform="translate(85,800) rotate(60) scale(1.3)"/>
+    <use href="#leaf-dark" transform="translate(55,740) rotate(65) scale(1.1)"/>
+    <use href="#leaf-dark" transform="translate(48,630) rotate(70) scale(1.2)"/>
+    <use href="#leaf-dark" transform="translate(100,680) rotate(55) scale(1)"/>
+    <use href="#leaf-dark" transform="translate(160,1000) rotate(45) scale(1.2)"/>
+    <use href="#leaf-dark" transform="translate(200,900) rotate(50) scale(1.1)"/>
+    <use href="#leaf-dark" transform="translate(140,900) rotate(70) scale(1)"/>
+    <use href="#leaf-dark" transform="translate(80,850) rotate(60) scale(1.1)"/>
+
+    <!-- Lower right canopy back -->
+    <use href="#leaf-dark" transform="translate(850,950) rotate(-50) scale(1.2)"/>
+    <use href="#leaf-dark" transform="translate(880,870) rotate(-55) scale(1.1)"/>
+    <use href="#leaf-dark" transform="translate(915,800) rotate(-60) scale(1.3)"/>
+    <use href="#leaf-dark" transform="translate(945,740) rotate(-65) scale(1.1)"/>
+    <use href="#leaf-dark" transform="translate(952,630) rotate(-70) scale(1.2)"/>
+    <use href="#leaf-dark" transform="translate(900,680) rotate(-55) scale(1)"/>
+    <use href="#leaf-dark" transform="translate(840,1000) rotate(-45) scale(1.2)"/>
+    <use href="#leaf-dark" transform="translate(800,900) rotate(-50) scale(1.1)"/>
+    <use href="#leaf-dark" transform="translate(860,900) rotate(-70) scale(1)"/>
+    <use href="#leaf-dark" transform="translate(920,850) rotate(-60) scale(1.1)"/>
+
+    <!-- Middle canopy back -->
+    <use href="#leaf-dark" transform="translate(150,600) rotate(50) scale(1.1)"/>
+    <use href="#leaf-dark" transform="translate(105,490) rotate(60) scale(1.2)"/>
+    <use href="#leaf-dark" transform="translate(85,390) rotate(70) scale(1.1)"/>
+    <use href="#leaf-dark" transform="translate(210,705) rotate(45) scale(1)"/>
+    <use href="#leaf-dark" transform="translate(175,605) rotate(55) scale(1.1)"/>
+    <use href="#leaf-dark" transform="translate(145,505) rotate(60) scale(1)"/>
+    <use href="#leaf-dark" transform="translate(850,600) rotate(-50) scale(1.1)"/>
+    <use href="#leaf-dark" transform="translate(895,490) rotate(-60) scale(1.2)"/>
+    <use href="#leaf-dark" transform="translate(915,390) rotate(-70) scale(1.1)"/>
+    <use href="#leaf-dark" transform="translate(790,705) rotate(-45) scale(1)"/>
+    <use href="#leaf-dark" transform="translate(825,605) rotate(-55) scale(1.1)"/>
+    <use href="#leaf-dark" transform="translate(855,505) rotate(-60) scale(1)"/>
+
+    <!-- Upper canopy back -->
+    <use href="#leaf-dark" transform="translate(230,300) rotate(35) scale(1)"/>
+    <use href="#leaf-dark" transform="translate(295,200) rotate(30) scale(0.9)"/>
+    <use href="#leaf-dark" transform="translate(350,160) rotate(25) scale(0.9)"/>
+    <use href="#leaf-dark" transform="translate(770,300) rotate(-35) scale(1)"/>
+    <use href="#leaf-dark" transform="translate(705,200) rotate(-30) scale(0.9)"/>
+    <use href="#leaf-dark" transform="translate(650,160) rotate(-25) scale(0.9)"/>
+    <use href="#leaf-dark" transform="translate(492,210) rotate(0) scale(1)"/>
+    <use href="#leaf-dark" transform="translate(508,210) rotate(0) scale(1)"/>
+
+    <!-- Deep interior fill -->
+    <use href="#leaf-dark" transform="translate(300,700) rotate(40) scale(1.3)"/>
+    <use href="#leaf-dark" transform="translate(700,700) rotate(-40) scale(1.3)"/>
+    <use href="#leaf-dark" transform="translate(350,550) rotate(30) scale(1.2)"/>
+    <use href="#leaf-dark" transform="translate(650,550) rotate(-30) scale(1.2)"/>
+    <use href="#leaf-dark" transform="translate(400,400) rotate(15) scale(1.1)"/>
+    <use href="#leaf-dark" transform="translate(600,400) rotate(-15) scale(1.1)"/>
+  </g>
+
+  <!-- ===== MID GREEN LEAF LAYER (body) ===== -->
+
+  <!-- Lower left canopy -->
+  <use href="#cluster-left" x="160" y="980"/>
+  <use href="#cluster-left" x="125" y="900"/>
+  <use href="#cluster-left" x="90" y="820"/>
+  <use href="#cluster-left" x="60" y="750"/>
+  <use href="#cluster-left" x="80" y="670"/>
+  <use href="#cluster-left" x="200" y="930"/>
+  <use href="#cluster-left" x="150" y="850"/>
+  <use href="#cluster-left" x="105" y="780"/>
+  <use href="#cluster-left" x="65" y="700"/>
+
+  <!-- Lower right canopy -->
+  <use href="#cluster-right" x="840" y="980"/>
+  <use href="#cluster-right" x="875" y="900"/>
+  <use href="#cluster-right" x="910" y="820"/>
+  <use href="#cluster-right" x="940" y="750"/>
+  <use href="#cluster-right" x="920" y="670"/>
+  <use href="#cluster-right" x="800" y="930"/>
+  <use href="#cluster-right" x="850" y="850"/>
+  <use href="#cluster-right" x="895" y="780"/>
+  <use href="#cluster-right" x="935" y="700"/>
+
+  <!-- Middle left canopy -->
+  <use href="#cluster-left" x="155" y="620"/>
+  <use href="#cluster-left" x="110" y="510"/>
+  <use href="#cluster-left" x="90" y="410"/>
+  <use href="#cluster-left" x="215" y="720"/>
+  <use href="#cluster-left" x="180" y="620"/>
+  <use href="#cluster-left" x="148" y="520"/>
+
+  <!-- Middle right canopy -->
+  <use href="#cluster-right" x="845" y="620"/>
+  <use href="#cluster-right" x="890" y="510"/>
+  <use href="#cluster-right" x="910" y="410"/>
+  <use href="#cluster-right" x="785" y="720"/>
+  <use href="#cluster-right" x="820" y="620"/>
+  <use href="#cluster-right" x="852" y="520"/>
+
+  <!-- Upper canopy -->
+  <use href="#cluster-left" x="235" y="320"/>
+  <use href="#cluster-left" x="298" y="215"/>
+  <use href="#cluster-left" x="355" y="175"/>
+  <use href="#cluster-right" x="765" y="320"/>
+  <use href="#cluster-right" x="702" y="215"/>
+  <use href="#cluster-right" x="645" y="175"/>
+
+  <!-- Center top -->
+  <use href="#cluster-center" x="495" y="225"/>
+  <use href="#cluster-center" x="483" y="280"/>
+  <use href="#cluster-center" x="517" y="280"/>
+
+  <!-- Interior fill -->
+  <use href="#cluster-left" x="280" y="650"/>
+  <use href="#cluster-right" x="720" y="650"/>
+  <use href="#cluster-left" x="320" y="500"/>
+  <use href="#cluster-right" x="680" y="500"/>
+  <use href="#cluster-left" x="370" y="380"/>
+  <use href="#cluster-right" x="630" y="380"/>
+  <use href="#cluster-center" x="450" y="320"/>
+  <use href="#cluster-center" x="550" y="320"/>
+
+  <!-- ===== LIGHT GREEN LEAF LAYER (front/sunlit highlights) ===== -->
+
+  <!-- Lower left highlights -->
+  <use href="#leaf-light" transform="translate(180,1000) rotate(45) scale(1)"/>
+  <use href="#leaf-light" transform="translate(140,920) rotate(50) scale(0.95)"/>
+  <use href="#leaf-light" transform="translate(100,840) rotate(55) scale(1)"/>
+  <use href="#leaf-light" transform="translate(70,770) rotate(60) scale(0.9)"/>
+
+  <!-- Lower right highlights -->
+  <use href="#leaf-light" transform="translate(820,1000) rotate(-45) scale(1)"/>
+  <use href="#leaf-light" transform="translate(860,920) rotate(-50) scale(0.95)"/>
+  <use href="#leaf-light" transform="translate(900,840) rotate(-55) scale(1)"/>
+  <use href="#leaf-light" transform="translate(930,770) rotate(-60) scale(0.9)"/>
+
+  <!-- Middle highlights -->
+  <use href="#leaf-light" transform="translate(165,640) rotate(45) scale(0.9)"/>
+  <use href="#leaf-light" transform="translate(120,530) rotate(55) scale(0.9)"/>
+  <use href="#leaf-light" transform="translate(835,640) rotate(-45) scale(0.9)"/>
+  <use href="#leaf-light" transform="translate(880,530) rotate(-55) scale(0.9)"/>
+
+  <!-- Upper highlights -->
+  <use href="#leaf-light" transform="translate(245,340) rotate(30) scale(0.85)"/>
+  <use href="#leaf-light" transform="translate(305,230) rotate(25) scale(0.8)"/>
+  <use href="#leaf-light" transform="translate(755,340) rotate(-30) scale(0.85)"/>
+  <use href="#leaf-light" transform="translate(695,230) rotate(-25) scale(0.8)"/>
+
+  <!-- Center highlights -->
+  <use href="#leaf-light" transform="translate(490,240) rotate(0) scale(0.9)"/>
+  <use href="#leaf-light" transform="translate(510,240) rotate(0) scale(0.9)"/>
+
+  <!-- ===== WHITE FRUIT CIRCLES ON BRANCH TIPS AND GAPS ===== -->
+
+  <!-- Lower branch tips -->
+  <use href="#white-fruit" x="120" y="800"/>
+  <use href="#white-fruit" x="85" y="710"/>
+  <use href="#white-fruit" x="880" y="800"/>
+  <use href="#white-fruit" x="915" y="710"/>
+
+  <!-- Middle branch tips -->
+  <use href="#white-fruit" x="150" y="600"/>
+  <use href="#white-fruit" x="105" y="490"/>
+  <use href="#white-fruit" x="85" y="390"/>
+  <use href="#white-fruit" x="850" y="600"/>
+  <use href="#white-fruit" x="895" y="490"/>
+  <use href="#white-fruit" x="915" y="390"/>
+
+  <!-- Upper branch tips -->
+  <use href="#white-fruit" x="230" y="300"/>
+  <use href="#white-fruit-sm" x="295" y="200"/>
+  <use href="#white-fruit-sm" x="350" y="160"/>
+  <use href="#white-fruit" x="770" y="300"/>
+  <use href="#white-fruit-sm" x="705" y="200"/>
+  <use href="#white-fruit-sm" x="650" y="160"/>
+
+  <!-- Sub-branch tips -->
+  <use href="#white-fruit-sm" x="140" y="965"/>
+  <use href="#white-fruit-sm" x="95" y="765"/>
+  <use href="#white-fruit-sm" x="860" y="965"/>
+  <use href="#white-fruit-sm" x="905" y="765"/>
+  <use href="#white-fruit-sm" x="210" y="705"/>
+  <use href="#white-fruit-sm" x="145" y="505"/>
+  <use href="#white-fruit-sm" x="790" y="705"/>
+  <use href="#white-fruit-sm" x="855" y="505"/>
+
+  <!-- Gap fillers (in spaces between leaf clusters) -->
+  <use href="#white-fruit-sm" x="250" y="780"/>
+  <use href="#white-fruit-sm" x="350" y="680"/>
+  <use href="#white-fruit-sm" x="450" y="600"/>
+  <use href="#white-fruit-sm" x="750" y="780"/>
+  <use href="#white-fruit-sm" x="650" y="680"/>
+  <use href="#white-fruit-sm" x="550" y="600"/>
+  <use href="#white-fruit-sm" x="300" y="580"/>
+  <use href="#white-fruit-sm" x="700" y="580"/>
+  <use href="#white-fruit-sm" x="380" y="460"/>
+  <use href="#white-fruit-sm" x="620" y="460"/>
+  <use href="#white-fruit-sm" x="420" y="360"/>
+  <use href="#white-fruit-sm" x="580" y="360"/>
+
+  <!-- Top gear crown - extra gear at the very top -->
+  <g filter="url(#gearGlow)">
+    <use href="#gold-gear" x="483" y="220" transform="scale(0.8) translate(120,55)"/>
+    <use href="#gold-gear" x="517" y="220" transform="scale(0.8) translate(155,55)"/>
+  </g>
+
+  <!-- ===== TERMINAL LEAF TIP CLUSTERS (very tips of highest branches) ===== -->
+  <use href="#cluster-tip" x="492" y="210"/>
+  <use href="#cluster-tip" x="508" y="210"/>
+  <use href="#cluster-tip" x="355" y="160"/>
+  <use href="#cluster-tip" x="645" y="160"/>
+  <use href="#cluster-tip" x="295" y="195"/>
+  <use href="#cluster-tip" x="705" y="195"/>
+
+  <!-- Extra tiny tip leaves -->
+  <use href="#leaf-light" transform="translate(350,160) rotate(15) scale(0.7)"/>
+  <use href="#leaf-light" transform="translate(350,160) rotate(-10) scale(0.7)"/>
+  <use href="#leaf-light" transform="translate(650,160) rotate(-15) scale(0.7)"/>
+  <use href="#leaf-light" transform="translate(650,160) rotate(10) scale(0.7)"/>
+  <use href="#leaf-light" transform="translate(492,200) rotate(-5) scale(0.7)"/>
+  <use href="#leaf-light" transform="translate(508,200) rotate(5) scale(0.7)"/>
+
+  <!-- ===== TINY DECORATIVE DOTS (scattered light flecks) ===== -->
+  <g fill="#FFD54F" opacity="0.25">
+    <circle cx="180" cy="950" r="1.5"/>
+    <circle cx="220" cy="880" r="1"/>
+    <circle cx="130" cy="780" r="1.5"/>
+    <circle cx="260" cy="650" r="1"/>
+    <circle cx="180" cy="550" r="1.5"/>
+    <circle cx="340" cy="450" r="1"/>
+    <circle cx="430" cy="350" r="1.5"/>
+    <circle cx="820" cy="950" r="1.5"/>
+    <circle cx="780" cy="880" r="1"/>
+    <circle cx="870" cy="780" r="1.5"/>
+    <circle cx="740" cy="650" r="1"/>
+    <circle cx="820" cy="550" r="1.5"/>
+    <circle cx="660" cy="450" r="1"/>
+    <circle cx="570" cy="350" r="1.5"/>
+  </g>
+
+  <!-- ===== TITLE ===== -->
+  <text x="500" y="65" text-anchor="middle" fill="#3E2723" font-family="Traditional Arabic, Arial" font-size="36" font-weight="bold">شجرة العائلة</text>
+  <text x="500" y="92" text-anchor="middle" fill="#8B7355" font-family="Traditional Arabic, Arial" font-size="14">Family Tree — 6 Generations · الأجداد إلى الأحفاد</text>
+  <line x1="350" y1="102" x2="650" y2="102" stroke="#C4A882" stroke-width="1" opacity="0.5"/>
+
+  <!-- ===== GENERATION LABELS ===== -->
+  <g font-family="Traditional Arabic, Arial">
+    <!-- Gen 6 -->
+    <line x1="800" y1="350" x2="880" y2="350" stroke="#2E7D32" stroke-width="1.5" opacity="0.4"/>
+    <text x="890" y="347" fill="#2E7D32" font-size="15" font-weight="bold">الجيل السادس</text>
+    <text x="890" y="362" fill="#2E7D32" font-size="11" opacity="0.7">+٦٠٬٠٠٠</text>
+
+    <!-- Gen 5 -->
+    <line x1="800" y1="520" x2="880" y2="520" stroke="#388E3C" stroke-width="1.5" opacity="0.4"/>
+    <text x="890" y="517" fill="#388E3C" font-size="15" font-weight="bold">الجيل الخامس</text>
+    <text x="890" y="532" fill="#388E3C" font-size="11" opacity="0.7">+٦٬٠٠٠</text>
+
+    <!-- Gen 4 -->
+    <line x1="800" y1="680" x2="880" y2="680" stroke="#43A047" stroke-width="1.5" opacity="0.4"/>
+    <text x="890" y="677" fill="#43A047" font-size="15" font-weight="bold">الجيل الرابع</text>
+    <text x="890" y="692" fill="#43A047" font-size="11" opacity="0.7">+٦٠٠</text>
+
+    <!-- Gen 3 -->
+    <line x1="130" y1="920" x2="60" y2="920" stroke="#4CAF50" stroke-width="1.5" opacity="0.4"/>
+    <text x="55" y="917" fill="#4CAF50" font-size="15" font-weight="bold" text-anchor="end">الجيل الثالث</text>
+    <text x="55" y="932" fill="#4CAF50" font-size="11" opacity="0.7" text-anchor="end">+٦٠</text>
+
+    <!-- Gen 2 -->
+    <line x1="130" y1="1050" x2="60" y2="1050" stroke="#CD7F32" stroke-width="1.5" opacity="0.4"/>
+    <text x="55" y="1047" fill="#CD7F32" font-size="15" font-weight="bold" text-anchor="end">الجيل الثاني</text>
+    <text x="55" y="1062" fill="#CD7F32" font-size="11" opacity="0.7" text-anchor="end">٦ أبناء</text>
+
+    <!-- Gen 1 -->
+    <line x1="130" y1="1200" x2="60" y2="1200" stroke="#D4A017" stroke-width="1.5" opacity="0.4"/>
+    <text x="55" y="1197" fill="#D4A017" font-size="15" font-weight="bold" text-anchor="end">الجد</text>
+    <text x="55" y="1212" fill="#D4A017" font-size="11" opacity="0.7" text-anchor="end">١</text>
+  </g>
+
+  <!-- ===== BOTTOM INFO ===== -->
+  <g font-family="Traditional Arabic, Arial">
+    <line x1="350" y1="1355" x2="650" y2="1355" stroke="#C4A882" stroke-width="1" opacity="0.4"/>
+    <text x="500" y="1378" text-anchor="middle" fill="#5D4037" font-size="18" font-weight="bold">إجمالي أفراد العائلة: ٦٦٬٦٦٧ فرداً</text>
+  </g>
+</svg>
