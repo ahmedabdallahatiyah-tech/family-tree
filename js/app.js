@@ -42,9 +42,9 @@ function filterTree(n, t) {
   return (m || f.length > 0) ? { ...n, children: f } : null;
 }
 
-// Exact design element positions from tree.svg (copied verbatim from design coordinates)
-const TRUNK_POS = [[500,1260],[500,1222],[500,1184],[500,1146],[500,1108],[500,1070],[500,1032]];
-const FRUIT_POS = [
+// Exact element positions from tree.svg design
+const TRUNK = [[500,1260],[500,1222],[500,1184],[500,1146],[500,1108],[500,1070],[500,1032]];
+const FRUIT = [
   [120,800],[85,710],[880,800],[915,710],
   [150,600],[105,490],[85,390],[850,600],[895,490],[915,390],
   [230,300],[295,200],[350,160],[770,300],[705,200],[650,160],
@@ -53,15 +53,13 @@ const FRUIT_POS = [
   [250,780],[350,680],[450,600],[750,780],[650,680],[550,600],
   [300,580],[700,580],[380,460],[620,460],[420,360],[580,360]
 ];
-const LEAF_POS = [
-  // Dark leaves (46)
+const LEAF = [
   [150,950],[120,870],[85,800],[55,740],[48,630],[100,680],[160,1000],[200,900],[140,900],[80,850],
   [850,950],[880,870],[915,800],[945,740],[952,630],[900,680],[840,1000],[800,900],[860,900],[920,850],
   [150,600],[105,490],[85,390],[210,705],[175,605],[145,505],
   [850,600],[895,490],[915,390],[790,705],[825,605],[855,505],
   [230,300],[295,200],[350,160],[770,300],[705,200],[650,160],[492,210],[508,210],
   [300,700],[700,700],[350,550],[650,550],[400,400],[600,400],
-  // Light leaves (24)
   [180,1000],[140,920],[100,840],[70,770],
   [820,1000],[860,920],[900,840],[930,770],
   [165,640],[120,530],[835,640],[880,530],
@@ -70,20 +68,32 @@ const LEAF_POS = [
 ];
 
 function assignPositions(root) {
+  const all = [root];
+  for (let i = 0; i < all.length; i++) {
+    if (all[i].children) all[i].children.forEach(c => all.push(c));
+  }
+  // Root stays at base
+  root._x = 500; root._y = 1315;
+  // Separate by depth priority
+  const byDepth = {};
+  all.forEach(n => { if (n === root) return; const d = n.depth || 1; if (!byDepth[d]) byDepth[d] = []; byDepth[d].push(n); });
   let ti = 0, fi = 0, li = 0;
-  function walk(n) {
-    if (!n) return;
-    if (n.name === 'سايل') { n._x = 500; n._y = 1315; }
-    if (!n.children) return;
-    for (const ch of n.children) {
-      if (ch.depth === 1 && ti < TRUNK_POS.length) { ch._x = TRUNK_POS[ti][0]; ch._y = TRUNK_POS[ti][1]; ti++; }
-      else if (fi < FRUIT_POS.length && ch.depth <= 3) { ch._x = FRUIT_POS[fi][0]; ch._y = FRUIT_POS[fi][1]; fi++; }
-      else if (li < LEAF_POS.length) { ch._x = LEAF_POS[li][0]; ch._y = LEAF_POS[li][1]; li++; }
-      else { ch._x = 200 + Math.random()*600; ch._y = 300 + Math.random()*600; }
-      walk(ch);
+  // Gen 1 → trunk
+  if (byDepth[1]) byDepth[1].forEach(n => { if (ti < TRUNK.length) { n._x = TRUNK[ti][0]; n._y = TRUNK[ti][1]; ti++; } });
+  // Gens 2-3 → fruit
+  for (let d = 2; d <= 3; d++) {
+    if (byDepth[d]) byDepth[d].forEach(n => { if (fi < FRUIT.length) { n._x = FRUIT[fi][0]; n._y = FRUIT[fi][1]; fi++; } });
+  }
+  // Remaining fruit positions → gen 4+
+  if (fi < FRUIT.length) {
+    for (let d = 4; d <= 9; d++) {
+      if (byDepth[d]) byDepth[d].forEach(n => { if (fi < FRUIT.length) { n._x = FRUIT[fi][0]; n._y = FRUIT[fi][1]; fi++; } });
     }
   }
-  walk(root);
+  // All remaining → leaves
+  for (let d = 1; d <= 9; d++) {
+    if (byDepth[d]) byDepth[d].forEach(n => { if (!n._x && li < LEAF.length) { n._x = LEAF[li][0]; n._y = LEAF[li][1]; li++; } });
+  }
 }
 
 async function loadData() {
@@ -139,34 +149,33 @@ async function loadSvg() {
 
 function addLabels(svg) {
   const ns = 'http://www.w3.org/2000/svg';
-  const overlay = document.createElementNS(ns, 'g');
-  overlay.id = 'nameLabels';
+  const g = document.createElementNS(ns, 'g');
+  g.id = 'nameLabels';
 
-  function label(name, x, y, depth) {
-    const g = document.createElementNS(ns, 'g');
-    g.dataset.name = name; g.dataset.depth = depth || '0';
-    const txt = document.createElementNS(ns, 'text');
-    txt.setAttribute('x', x); txt.setAttribute('y', y);
-    txt.setAttribute('text-anchor', 'middle');
-    txt.setAttribute('dominant-baseline', 'central');
-    txt.setAttribute('font-family', 'Traditional Arabic, Arial');
-    txt.setAttribute('font-size', depth <= 1 ? '9' : '7.5');
-    txt.setAttribute('font-weight', depth <= 1 ? 'bold' : 'normal');
-    // Trunk (plaques) = white/gold, leaves = dark green, fruits = saddlebrown
-    if (depth <= 1) txt.setAttribute('fill', '#FFFCF5');
-    else if (depth >= 4) txt.setAttribute('fill', '#1B5E20');
-    else txt.setAttribute('fill', '#4E342E');
-    txt.textContent = name;
-    g.appendChild(txt);
-    overlay.appendChild(g);
+  function add(name, x, y, depth) {
+    const el = document.createElementNS(ns, 'text');
+    el.setAttribute('x', x); el.setAttribute('y', y);
+    el.setAttribute('text-anchor', 'middle');
+    el.setAttribute('dominant-baseline', 'central');
+    el.setAttribute('font-family', 'Traditional Arabic, Arial');
+    el.setAttribute('font-size', depth <= 1 ? '9' : '7');
+    el.setAttribute('font-weight', depth <= 1 ? 'bold' : 'normal');
+    if (depth <= 1) el.setAttribute('fill', '#FFFCF5');
+    else if (depth <= 3) el.setAttribute('fill', '#4E342E');
+    else el.setAttribute('fill', '#1B5E20');
+    el.textContent = name;
+    const wrap = document.createElementNS(ns, 'g');
+    wrap.dataset.name = name; wrap.dataset.depth = depth || '0';
+    wrap.appendChild(el);
+    g.appendChild(wrap);
   }
 
   function walk(n) {
-    if (n.name !== 'سايل' && n._x && n._y) label(n.name, n._x, n._y, n.depth);
+    if (n.name !== 'سايل' && n._x && n._y) add(n.name, n._x, n._y, n.depth);
     if (n.children) n.children.forEach(walk);
   }
   walk(treeData);
-  svg.appendChild(overlay);
+  svg.appendChild(g);
 }
 
 function setupViewer(container, svg) {
@@ -213,8 +222,7 @@ function performSearch() {
   document.querySelectorAll('#nameLabels g').forEach(el => {
     const m = el.dataset.name === term;
     el.style.opacity = (!term || m) ? '1' : '0.1';
-    if (m) el.style.filter = 'drop-shadow(0 0 5px #FFD700)';
-    else el.style.filter = 'none';
+    el.style.filter = m ? 'drop-shadow(0 0 5px #FFD700)' : 'none';
   });
 }
 
