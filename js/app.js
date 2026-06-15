@@ -1,398 +1,379 @@
-const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTAgb_bYt1XcaC6AKpvLPpbugHMP_VhijT1t3GUshhv4IvJRPT01g1_LzTYN26ey6x1XeZAFngeP2yM/pub?output=csv';
+const TREE_SVG_URL = 'tree.svg';
 const DATA_FILE = 'data.json';
-const DATA_TIMESTAMP_FILE = 'data-timestamp.json';
-const REFRESH_INTERVAL = 300000;
-const CACHE_KEY = 'familyTreeData';
-const CACHE_TIME_KEY = 'familyTreeTime';
+const REFRESH_MS = 300000;
 
 let treeData = null;
-let currentScale = 1;
-let currentTranslate = { x: 0, y: 0 };
-let isPanning = false;
-let panStart = { x: 0, y: 0, tx: 0, ty: 0 };
+
+function gid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+function parseCSV(csvText) {
+  const lines = csvText.trim().split('\n').filter(l => l.trim());
+  const root = { id: gid(), name: 'سايل', children: [], depth: 0 };
+  const anc = {};
+  for (const line of lines) {
+    const cells = line.split(',').map(c => c.trim());
+    let parent = root, pd = -1;
+    for (let lv = 0; lv < cells.length; lv++) {
+      const name = cells[lv];
+      if (!name) { if (anc[lv]) { parent = anc[lv]; pd = lv; } continue; }
+      if (lv === 0 && name === 'سايل') { anc[0] = root; parent = root; pd = 0; continue; }
+      if (lv === 0) {
+        let n = root.children.find(c => c.name === name);
+        if (!n) { n = { id: gid(), name, children: [], depth: 1 }; root.children.push(n); }
+        anc[0] = root; anc[1] = n; parent = n; pd = 1; continue;
+      }
+      if (parent && parent.children) {
+        let n = parent.children.find(c => c.name === name);
+        if (!n) { n = { id: gid(), name, children: [], depth: pd + 1 }; parent.children.push(n); }
+        anc[lv] = n; parent = n; pd = lv;
+      }
+    }
+  }
+  return root;
+}
+
+function count(n) { let c = 1; if (n.children) for (const ch of n.children) c += count(ch); return c; }
+function maxDepth(n) { let m = n.depth || 0; if (n.children) for (const ch of n.children) m = Math.max(m, maxDepth(ch)); return m; }
+function allNames(n, arr) { arr = arr || []; arr.push(n.name); if (n.children) n.children.forEach(c => allNames(c, arr)); return arr; }
+
+function filterTree(n, t) {
+  if (!t) return n;
+  const tl = t.toLowerCase();
+  const match = n.name.toLowerCase().includes(tl);
+  let filtered = [];
+  if (n.children) n.children.forEach(c => { const f = filterTree(c, t); if (f) filtered.push(f); });
+  return (match || filtered.length > 0) ? { ...n, children: filtered } : null;
+}
+
+const TREE_POS = {
+  trunk: [
+    { x: 500, y: 1260 }, { x: 500, y: 1222 }, { x: 500, y: 1184 },
+    { x: 500, y: 1146 }, { x: 500, y: 1108 }, { x: 500, y: 1070 },
+    { x: 500, y: 1032 }
+  ],
+  canopy: [
+    { x: 120, y: 800 }, { x: 85, y: 710 }, { x: 48, y: 630 },
+    { x: 880, y: 800 }, { x: 915, y: 710 }, { x: 952, y: 630 },
+    { x: 150, y: 600 }, { x: 105, y: 490 }, { x: 85, y: 390 },
+    { x: 850, y: 600 }, { x: 895, y: 490 }, { x: 915, y: 390 },
+    { x: 230, y: 300 }, { x: 295, y: 200 }, { x: 350, y: 160 },
+    { x: 770, y: 300 }, { x: 705, y: 200 }, { x: 650, y: 160 },
+    { x: 250, y: 780 }, { x: 350, y: 680 }, { x: 450, y: 600 },
+    { x: 550, y: 600 }, { x: 650, y: 680 }, { x: 750, y: 780 },
+    { x: 300, y: 580 }, { x: 700, y: 580 },
+    { x: 380, y: 460 }, { x: 620, y: 460 },
+    { x: 420, y: 360 }, { x: 580, y: 360 },
+    { x: 492, y: 210 }, { x: 508, y: 210 },
+  ]
+};
+
+let posIndex = 0;
+function assignPos(n, depth) {
+  if (n.name === 'سايل' && n.depth === 0) { n._px = 500; n._py = 1315; }
+  if (!n.children || n.children.length === 0) return;
+  for (const ch of n.children) {
+    if (ch.depth === 1 && posIndex < TREE_POS.trunk.length) {
+      ch._px = TREE_POS.trunk[posIndex].x;
+      ch._py = TREE_POS.trunk[posIndex].y;
+      posIndex++;
+    } else if (posIndex < TREE_POS.trunk.length + TREE_POS.canopy.length) {
+      const ci = posIndex - 7;
+      if (ci >= 0 && ci < TREE_POS.canopy.length) {
+        ch._px = TREE_POS.canopy[ci].x;
+        ch._py = TREE_POS.canopy[ci].y;
+      } else {
+        ch._px = 500 + Math.random() * 200 - 100;
+        ch._py = 800 + Math.random() * 400;
+      }
+      posIndex++;
+    } else {
+      ch._px = 500 + Math.random() * 800 - 400;
+      ch._py = 400 + Math.random() * 600;
+    }
+    assignPos(ch, ch.depth);
+  }
+}
+
+function degToRad(d) { return d * Math.PI / 180; }
+
+let svgTemplate = null;
+async function loadSvgTemplate() {
+  if (svgTemplate) return svgTemplate;
+  const resp = await fetch(TREE_SVG_URL);
+  const text = await resp.text();
+  const parser = new DOMParser();
+  svgTemplate = parser.parseFromString(text, 'image/svg+xml').documentElement;
+  return svgTemplate;
+}
 
 async function loadData() {
-  showStatus('جاري تحميل البيانات...', 'loading');
+  const sb = document.getElementById('statusBar');
+  sb.textContent = 'جاري تحميل البيانات...';
+  sb.className = 'status-bar loading';
+
   try {
     const resp = await fetch(DATA_FILE + '?t=' + Date.now());
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const json = await resp.json();
-    if (!json.name) throw new Error('بيانات غير صالحة');
-    treeData = json;
-    const total = countNodes(json);
-    if (total < 5) throw new Error('البيانات غير مكتملة');
-    cacheData(json);
-    renderTree(json);
-    updateStats(json);
-    const ts = await fetchDataTimestamp();
-    showStatus('✓ آخر تحديث: ' + (ts || new Date().toLocaleString('ar-SA')), 'success');
-    return json;
-  } catch (err) {
-    console.warn('فشل تحميل data.json:', err);
-    const cached = loadCached();
-    if (cached) {
-      treeData = cached;
-      renderTree(cached);
-      updateStats(cached);
-      showStatus('📦 تم تحميل البيانات المخزنة', 'warning');
-      return cached;
+    treeData = await resp.json();
+    if (!treeData.name) throw new Error('بيانات غير صالحة');
+    if (count(treeData) < 5) throw new Error('بيانات غير مكتملة');
+    localStorage.setItem('cache', JSON.stringify(treeData));
+    await render();
+    sb.textContent = '✓ آخر تحديث: ' + new Date().toLocaleString('ar-SA');
+    sb.className = 'status-bar success';
+  } catch (e) {
+    sb.textContent = '⚠ ' + e.message;
+    sb.className = 'status-bar error';
+    const c = localStorage.getItem('cache');
+    if (c) {
+      treeData = JSON.parse(c);
+      await render();
+      sb.textContent = '📦 تم تحميل البيانات المخزنة';
+      sb.className = 'status-bar warning';
     }
-    showStatus('⚠ فشل تحميل البيانات', 'error');
-    return null;
   }
 }
 
-async function fetchDataTimestamp() {
-  try {
-    const resp = await fetch(DATA_TIMESTAMP_FILE + '?t=' + Date.now());
-    if (resp.ok) {
-      const json = await resp.json();
-      return json.updated || null;
-    }
-  } catch (e) { /* ignore */ }
-  return null;
-}
-
-function cacheData(data) {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-    localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
-  } catch (e) { /* quota exceeded */ }
-}
-
-function loadCached() {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch (e) { return null; }
-}
-
-async function refreshData() {
-  await loadData();
-}
-
-function showStatus(msg, type) {
-  const el = document.getElementById('statusBar');
-  if (el) { el.textContent = msg; el.className = 'status-bar ' + (type || ''); }
-}
-
-function updateStats(root) {
-  const total = countNodes(root);
-  const maxDepth = getMaxDepth(root);
-  const genLabels = ['', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع'];
-  document.getElementById('totalCount').textContent = total.toLocaleString('ar-SA');
-  document.getElementById('generationCount').textContent = genLabels[maxDepth] || maxDepth;
-}
-
-function renderTree(root) {
-  const container = document.getElementById('treeContainer');
+async function render() {
+  if (!treeData) return;
+  const container = document.getElementById('treeView');
   container.innerHTML = '';
-  if (!root || !root.children || root.children.length === 0) {
-    container.innerHTML = '<div class="empty-state">لا توجد بيانات لعرضها</div>';
-    return;
-  }
 
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('width', '100%');
-  svg.setAttribute('height', '100%');
-  svg.style.display = 'block';
+  try {
+    const svg = await loadSvgTemplate();
+    const clone = svg.cloneNode(true);
+    clone.setAttribute('width', '100%');
+    clone.setAttribute('height', '100%');
 
-  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-  defs.innerHTML = `
-    <filter id="shadow1" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="1" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.15)"/>
-    </filter>
-    <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="rgba(212,160,23,0.12)"/>
-      <stop offset="100%" stop-color="rgba(212,160,23,0)"/>
-    </radialGradient>`;
-  svg.appendChild(defs);
+    // Assign positions
+    posIndex = 0;
+    assignPos(treeData);
 
-  const mainG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  mainG.setAttribute('id', 'mainGroup');
-  svg.appendChild(mainG);
+    // Add a group for name overlays
+    const defs = clone.querySelector('defs') || clone.querySelector('svg > defs');
+    const namesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    namesGroup.setAttribute('id', 'names-layer');
 
-  const zoomG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  zoomG.setAttribute('id', 'zoomGroup');
-  mainG.appendChild(zoomG);
+    // Place names on the tree
+    function placeNames(node) {
+      if (node.name === 'سايل' && node.depth === 0) {
+        // Skip root - it doesn't need a label on the tree
+      } else if (node._px && node._py) {
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        const depth = node.depth || 1;
+        const colors = ['#D4A017', '#CD7F32', '#4CAF50', '#388E3C', '#2E7D32', '#1B5E20', '#0D3B0F'];
 
-  const vSpacing = 130, hSpacing = 180, r = 20, pad = 80;
-  const totalDepth = getMaxDepth(root);
+        // Background circle
+        const bg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        bg.setAttribute('cx', node._px);
+        bg.setAttribute('cy', node._py);
+        const r = depth <= 2 ? 8 : 6;
+        bg.setAttribute('r', r);
+        bg.setAttribute('fill', colors[Math.min(depth, colors.length - 1)]);
+        bg.setAttribute('opacity', '0.85');
 
-  function layout(n, x, y) {
-    if (!n.children || n.children.length === 0) {
-      n._x = x; n._y = y; return 1;
+        // Name text
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', node._px);
+        text.setAttribute('y', node._py);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dominant-baseline', 'central');
+        text.setAttribute('fill', '#FFFCF5');
+        text.setAttribute('font-family', 'Traditional Arabic, Arial');
+        text.setAttribute('font-size', depth <= 2 ? '8' : '7');
+        text.textContent = node.name.length > 6 ? node.name.substring(0, 5) + '..' : node.name;
+
+        // Connection line to parent
+        if (node._ppx && node._ppy && ((node._ppx !== node._px) || (node._ppy !== node._py))) {
+          const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          ln.setAttribute('x1', node._ppx);
+          ln.setAttribute('y1', node._ppy);
+          ln.setAttribute('x2', node._px);
+          ln.setAttribute('y2', node._py);
+          ln.setAttribute('stroke', '#8D6E63');
+          ln.setAttribute('stroke-width', '1');
+          ln.setAttribute('opacity', '0.3');
+          namesGroup.appendChild(ln);
+        }
+
+        g.appendChild(bg);
+        g.appendChild(text);
+        namesGroup.appendChild(g);
+      }
+      if (node.children) node.children.forEach(placeNames);
     }
-    const counts = n.children.map(c => layout(c, x, y + vSpacing));
-    const total = counts.reduce((a, b) => a + b, 0);
-    let cx = x - (total - 1) * hSpacing / 2;
-    n.children.forEach((c, i) => {
-      c._x = cx + (counts[i] - 1) * hSpacing / 2;
-      c._y = y + vSpacing;
-      cx += counts[i] * hSpacing;
+
+    // Track parent positions for connection lines
+    function trackParent(node, px, py) {
+      if (node.children) {
+        for (const ch of node.children) {
+          if (ch._px && ch._py) {
+            ch._ppx = node._px || px;
+            ch._ppy = node._py || py;
+          }
+          trackParent(ch, ch._px || px, ch._py || py);
+        }
+      }
+    }
+    trackParent(treeData, 500, 1315);
+
+    // Also set parent for root children
+    if (treeData.children) {
+      for (const ch of treeData.children) {
+        ch._ppx = 500;
+        ch._ppy = 1315;
+      }
+    }
+
+    placeNames(treeData);
+
+    // Update title with actual data
+    const total = count(treeData);
+    const depth = maxDepth(treeData);
+    const titleEl = clone.querySelector('text:first-of-type');
+    const bottomTexts = clone.querySelectorAll('text');
+    bottomTexts.forEach(t => {
+      if (t.textContent.includes('إجمالي')) {
+        t.textContent = 'إجمالي أفراد العائلة: ' + total + ' فرداً';
+      }
     });
-    n._x = x; n._y = y;
-    return total;
+
+    // Update generation labels
+    const genLabels = clone.querySelectorAll('text[font-weight="bold"]');
+    const genSuffix = ['', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر'];
+
+    // Update subtitle
+    const subEl = clone.querySelector('text[font-size="14"]');
+    if (subEl) {
+      subEl.textContent = depth + ' أجيال · ' + total + ' فرداً';
+    }
+
+    // Insert names layer before the title (at the end)
+    const rootSvg = clone.tagName === 'svg' ? clone : clone.querySelector('svg');
+    if (rootSvg) {
+      rootSvg.appendChild(namesGroup);
+    } else {
+      clone.appendChild(namesGroup);
+    }
+
+    container.appendChild(clone);
+
+    // Update stats
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('genCount').textContent = depth;
+
+    // Setup interaction
+    setupZoom(container, clone);
+  } catch (e) {
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:#3E2723">خطأ في تحميل الشجرة: ' + e.message + '</div>';
+  }
+}
+
+function setupZoom(container, svg) {
+  let scale = 1;
+  const vb = [0, 0, 1000, 1400];
+  svg.setAttribute('viewBox', vb.join(' '));
+
+  function update() {
+    svg.setAttribute('viewBox', vb.join(' '));
+    document.getElementById('zoomLevel').textContent = Math.round(1400 / vb[3] * 100) + '%';
   }
 
-  layout(root, (totalDepth + 1) * hSpacing / 2, pad);
-
-  function draw(n, parentEl) {
-    if (n === root && n.children.length > 0) {
-      n.children.forEach(c => draw(c, parentEl));
-      return;
-    }
-    if (n._parentX !== undefined && n._parentY !== undefined && n._parentY < n._y) {
-      const line = makeLine(n);
-      parentEl.appendChild(line);
-    }
-    const depth = n.depth || 0;
-    const colors = ['#D4A017','#CD7F32','#4CAF50','#43A047','#388E3C','#2E7D32','#1B5E20','#0D3B0F'];
-    const color = colors[Math.min(depth, colors.length - 1)];
-
-    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.setAttribute('class', 'node-group');
-    g.setAttribute('data-id', n.id);
-    g.setAttribute('transform', `translate(${n._x}, ${n._y})`);
-    g.style.cursor = 'pointer';
-
-    const glow = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    glow.setAttribute('r', (r + 8).toString());
-    glow.setAttribute('fill', 'url(#glowGrad)');
-    glow.setAttribute('opacity', '0');
-    g.appendChild(glow);
-
-    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    bg.setAttribute('r', r.toString());
-    bg.setAttribute('fill', '#FFFCF5');
-    bg.setAttribute('stroke', color);
-    bg.setAttribute('stroke-width', '2.5');
-    bg.setAttribute('filter', 'url(#shadow1)');
-    g.appendChild(bg);
-
-    const inner = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    inner.setAttribute('r', '5');
-    inner.setAttribute('fill', 'none');
-    inner.setAttribute('stroke', color);
-    inner.setAttribute('stroke-width', '1.5');
-    inner.setAttribute('opacity', '0.5');
-    g.appendChild(inner);
-
-    const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    txt.setAttribute('text-anchor', 'middle');
-    txt.setAttribute('dominant-baseline', 'central');
-    txt.setAttribute('fill', '#3E2723');
-    txt.setAttribute('font-size', depth <= 3 ? '11' : '10');
-    txt.setAttribute('font-family', 'Traditional Arabic, Arial');
-    txt.setAttribute('font-weight', depth <= 2 ? 'bold' : 'normal');
-    txt.setAttribute('transform', `translate(0, ${r + 16})`);
-    txt.textContent = n.name;
-    g.appendChild(txt);
-
-    if (n.children && n.children.length > 0) {
-      const btn = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      btn.setAttribute('r', '8');
-      btn.setAttribute('fill', color);
-      btn.setAttribute('stroke', color);
-      btn.setAttribute('opacity', '0.85');
-      btn.setAttribute('filter', 'url(#shadow1)');
-      btn.setAttribute('class', 'expand-btn');
-      btn.setAttribute('transform', `translate(0, ${-r - 12})`);
-
-      const icon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      icon.setAttribute('text-anchor', 'middle');
-      icon.setAttribute('dominant-baseline', 'central');
-      icon.setAttribute('fill', '#FFFCF5');
-      icon.setAttribute('font-size', '10');
-      icon.setAttribute('font-weight', 'bold');
-      icon.setAttribute('transform', `translate(0, ${-r - 12})`);
-      icon.setAttribute('class', 'expand-icon');
-      icon.textContent = '◀';
-
-      g.appendChild(btn);
-      g.appendChild(icon);
-      g.classList.add('collapsible');
-      g.dataset.expanded = 'true';
-    }
-
-    g.addEventListener('mouseenter', () => { glow.setAttribute('opacity', '1'); bg.setAttribute('stroke-width', '3.5'); });
-    g.addEventListener('mouseleave', () => { glow.setAttribute('opacity', '0'); bg.setAttribute('stroke-width', '2.5'); });
-    g.addEventListener('click', (e) => { e.stopPropagation(); toggleChildren(g, n); });
-
-    parentEl.appendChild(g);
-    n._svgGroup = g;
-    if (n.children) n.children.forEach(c => draw(c, parentEl));
-  }
-
-  draw(root, zoomG);
-
-  const bbox = zoomG.getBBox();
-  const rect = container.getBoundingClientRect();
-  const sx = rect.width / (bbox.width + 100);
-  const sy = rect.height / (bbox.height + 100);
-  currentScale = Math.min(sx, sy, 2);
-  currentTranslate = {
-    x: (rect.width - bbox.width * currentScale) / 2 - bbox.x * currentScale,
-    y: (rect.height - bbox.height * currentScale) / 2 - bbox.y * currentScale
-  };
-  applyTransform();
-
-  container.appendChild(svg);
-  setupPanZoom(container);
-}
-
-function makeLine(n) {
-  const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-  l.setAttribute('x1', n._parentX.toString());
-  l.setAttribute('y1', n._parentY.toString());
-  l.setAttribute('x2', n._x.toString());
-  l.setAttribute('y2', n._y.toString());
-  l.setAttribute('stroke', '#8D6E63');
-  l.setAttribute('stroke-width', '2');
-  l.setAttribute('opacity', '0.4');
-  l.setAttribute('stroke-linecap', 'round');
-  return l;
-}
-
-function toggleChildren(g, node) {
-  const exp = g.dataset.expanded === 'true';
-  g.dataset.expanded = exp ? 'false' : 'true';
-  const icon = g.querySelector('.expand-icon');
-  if (icon) icon.textContent = exp ? '▶' : '◀';
-  const ids = new Set();
-  collectIds(node, ids);
-  ids.forEach(id => {
-    const el = document.querySelector(`[data-id="${id}"]`);
-    if (el) el.style.display = exp ? 'none' : '';
-  });
-}
-
-function collectIds(node, set) {
-  set.add(node.id);
-  if (node.children) node.children.forEach(c => collectIds(c, set));
-}
-
-function applyTransform() {
-  const g = document.getElementById('mainGroup');
-  if (g) g.setAttribute('transform', `translate(${currentTranslate.x}, ${currentTranslate.y}) scale(${currentScale})`);
-  updateZoomLabel();
-}
-
-function updateZoomLabel() {
-  const el = document.getElementById('zoomLevel');
-  if (el) el.textContent = Math.round(currentScale * 100) + '%';
-}
-
-function setupPanZoom(container) {
-  container.addEventListener('wheel', (e) => {
+  container.onwheel = (e) => {
     e.preventDefault();
-    const d = e.deltaY > 0 ? 0.9 : 1.1;
-    const ns = Math.max(0.2, Math.min(5, currentScale * d));
     const rect = container.getBoundingClientRect();
-    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-    currentTranslate.x = mx - (mx - currentTranslate.x) * (ns / currentScale);
-    currentTranslate.y = my - (my - currentTranslate.y) * (ns / currentScale);
-    currentScale = ns;
-    applyTransform();
-  }, { passive: false });
+    const mx = (e.clientX - rect.left) / rect.width;
+    const my = (e.clientY - rect.top) / rect.height;
+    const factor = e.deltaY > 0 ? 1.15 : 0.85;
+    const newW = Math.max(200, Math.min(10000, vb[2] * factor));
+    const newH = newW * 1400 / 1000;
+    const cx = vb[0] + mx * vb[2];
+    const cy = vb[1] + my * vb[3];
+    vb[0] = cx - mx * newW;
+    vb[1] = cy - my * newH;
+    vb[2] = newW;
+    vb[3] = newH;
+    update();
+  };
 
-  container.addEventListener('mousedown', (e) => {
+  let pan = false, px, py, vbx, vby;
+  container.onmousedown = (e) => {
     if (e.target === container || e.target.tagName === 'svg') {
-      isPanning = true;
-      panStart = { x: e.clientX, y: e.clientY, tx: currentTranslate.x, ty: currentTranslate.y };
+      pan = true; px = e.clientX; py = e.clientY;
+      vbx = vb[0]; vby = vb[1];
       container.style.cursor = 'grabbing';
     }
-  });
-
-  window.addEventListener('mousemove', (e) => {
-    if (isPanning) {
-      currentTranslate.x = panStart.tx + (e.clientX - panStart.x);
-      currentTranslate.y = panStart.ty + (e.clientY - panStart.y);
-      applyTransform();
-    }
-  });
-
-  window.addEventListener('mouseup', () => {
-    if (isPanning) { isPanning = false; container.style.cursor = 'grab'; }
-  });
-
-  container.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 1) {
-      isPanning = true;
-      panStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, tx: currentTranslate.x, ty: currentTranslate.y };
-    }
-  }, { passive: true });
-
-  container.addEventListener('touchmove', (e) => {
-    if (isPanning && e.touches.length === 1) {
-      currentTranslate.x = panStart.tx + (e.touches[0].clientX - panStart.x);
-      currentTranslate.y = panStart.ty + (e.touches[0].clientY - panStart.y);
-      applyTransform();
-    }
-  }, { passive: true });
-
-  container.addEventListener('touchend', () => { isPanning = false; }, { passive: true });
-}
-
-function zoomIn() { currentScale = Math.min(5, currentScale * 1.3); applyTransform(); }
-function zoomOut() { currentScale = Math.max(0.2, currentScale * 0.7); applyTransform(); }
-
-function resetZoom() {
-  const g = document.getElementById('zoomGroup');
-  const container = document.getElementById('treeContainer');
-  if (!g || !container) return;
-  const bbox = g.getBBox();
-  const rect = container.getBoundingClientRect();
-  const sx = rect.width / (bbox.width + 100), sy = rect.height / (bbox.height + 100);
-  currentScale = Math.min(sx, sy, 2);
-  currentTranslate = {
-    x: (rect.width - bbox.width * currentScale) / 2 - bbox.x * currentScale,
-    y: (rect.height - bbox.height * currentScale) / 2 - bbox.y * currentScale
   };
-  applyTransform();
+  window.onmousemove = (e) => {
+    if (pan) {
+      const dx = (e.clientX - px) / container.clientWidth * vb[2];
+      const dy = (e.clientY - py) / container.clientHeight * vb[3];
+      vb[0] = vbx - dx; vb[1] = vby - dy;
+      update();
+    }
+  };
+  window.onmouseup = () => { pan = false; container.style.cursor = 'grab'; };
+
+  container.ontouchstart = (e) => {
+    if (e.touches.length === 1) {
+      pan = true; px = e.touches[0].clientX; py = e.touches[0].clientY;
+      vbx = vb[0]; vby = vb[1];
+    }
+  };
+  container.ontouchmove = (e) => {
+    if (pan && e.touches.length === 1) {
+      const dx = (e.touches[0].clientX - px) / container.clientWidth * vb[2];
+      const dy = (e.touches[0].clientY - py) / container.clientHeight * vb[3];
+      vb[0] = vbx - dx; vb[1] = vby - dy;
+      update();
+    }
+  };
+  container.ontouchend = () => { pan = false; };
+
+  window.zoomIn = () => {
+    vb[2] /= 1.4; vb[3] /= 1.4;
+    vb[0] += vb[2] * 0.2; vb[1] += vb[3] * 0.2;
+    update();
+  };
+  window.zoomOut = () => {
+    vb[0] -= vb[2] * 0.1; vb[1] -= vb[3] * 0.1;
+    vb[2] *= 1.4; vb[3] *= 1.4;
+    update();
+  };
+  window.resetZoom = () => {
+    vb[0] = 0; vb[1] = 0; vb[2] = 1000; vb[3] = 1400;
+    update();
+  };
 }
 
 function performSearch() {
   const input = document.getElementById('searchInput');
   const term = input.value.trim();
-  if (!term || !treeData) { if (treeData) renderTree(treeData); return; }
-  const filtered = filterTree(treeData, term);
-  if (filtered && filtered.children && filtered.children.length > 0) {
-    renderTree(filtered);
-    showStatus('🔍 نتائج البحث عن "' + term + '"', 'search');
+  if (!term || !treeData) return;
+  const results = allNames(filterTree(treeData, term));
+  const sb = document.getElementById('statusBar');
+  if (results.length > 1) {
+    sb.textContent = '🔍 "' + term + '" - ' + (results.length - 1) + ' نتيجة';
+    sb.className = 'status-bar search';
   } else {
-    showStatus('🔍 لا توجد نتائج لـ "' + term + '"', 'error');
+    sb.textContent = '🔍 لا توجد نتائج';
+    sb.className = 'status-bar error';
   }
-}
-
-function exportData() {
-  if (!treeData) return;
-  const blob = new Blob([JSON.stringify(treeData, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'family-tree-' + new Date().toISOString().slice(0, 10) + '.json';
-  a.click();
-  URL.revokeObjectURL(a.href);
-  showStatus('✓ تم تصدير البيانات', 'success');
-}
-
-function toggleFullscreen() {
-  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-  else document.exitFullscreen();
 }
 
 function init() {
   loadData();
-  setInterval(loadData, REFRESH_INTERVAL);
-  document.getElementById('refreshBtn').addEventListener('click', refreshData);
-  document.getElementById('searchBtn').addEventListener('click', performSearch);
-  document.getElementById('searchInput').addEventListener('keyup', (e) => { if (e.key === 'Enter') performSearch(); });
-  document.getElementById('zoomInBtn').addEventListener('click', zoomIn);
-  document.getElementById('zoomOutBtn').addEventListener('click', zoomOut);
-  document.getElementById('resetBtn').addEventListener('click', resetZoom);
-  document.getElementById('exportBtn').addEventListener('click', exportData);
-  document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
-  window.addEventListener('resize', resetZoom);
+  setInterval(loadData, REFRESH_MS);
+  document.getElementById('searchBtn').onclick = performSearch;
+  document.getElementById('searchInput').onkeyup = (e) => { if (e.key === 'Enter') performSearch(); };
+  document.getElementById('zoomInBtn').onclick = () => window.zoomIn && zoomIn();
+  document.getElementById('zoomOutBtn').onclick = () => window.zoomOut && zoomOut();
+  document.getElementById('resetBtn').onclick = () => window.resetZoom && resetZoom();
+  document.getElementById('refreshBtn').onclick = () => loadData();
+  document.getElementById('fullscreenBtn').onclick = () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  };
 }
 
 document.addEventListener('DOMContentLoaded', init);

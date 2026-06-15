@@ -4,41 +4,156 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>شجرة العائلة - قبيلة العجمان</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Traditional Arabic', 'Amiri', 'Scheherazade New', serif;
+      background: #3E2723;
+      color: #FFFCF5;
+      overflow: hidden;
+      height: 100vh;
+      direction: rtl;
+    }
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .header {
+      background: linear-gradient(135deg, #3E2723, #5D4037);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      border-bottom: 1px solid #D4A01733;
+    }
+    .header h1 {
+      color: #FFD54F;
+      font-size: 22px;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header h1 small {
+      color: #A1887F;
+      font-size: 13px;
+      font-weight: normal;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .search-box {
+      display: flex;
+      align-items: center;
+    }
+    .search-box input {
+      padding: 5px 10px;
+      border: 1px solid #8D6E63;
+      border-left: none;
+      border-radius: 0 4px 4px 0;
+      background: #FFFCF5;
+      color: #3E2723;
+      font-family: inherit;
+      font-size: 12px;
+      width: 140px;
+      outline: none;
+    }
+    .search-box input:focus { border-color: #D4A017; }
+    .search-box button {
+      padding: 5px 8px;
+      border: 1px solid #8D6E63;
+      border-radius: 4px 0 0 4px;
+      background: #8D6E63;
+      color: #FFFCF5;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      background: #6D4C41;
+      color: #FFFCF5;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .btn:hover { background: #8D6E63; }
+    .stats {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #A1887F;
+      font-size: 12px;
+    }
+    .stats .num { color: #FFD54F; font-weight: bold; }
+    #zoomLevel { color: #A1887F; font-size: 11px; min-width: 35px; text-align: center; }
+    .status-bar {
+      padding: 3px 16px;
+      font-size: 11px;
+      text-align: center;
+      transition: 0.3s;
+    }
+    .status-bar.loading { background: #FFF8E1; color: #F57F17; }
+    .status-bar.success { background: #E8F5E9; color: #2E7D32; }
+    .status-bar.error { background: #FFEBEE; color: #C62828; }
+    .status-bar.warning { background: #FFF3E0; color: #E65100; }
+    .status-bar.search { background: #E3F2FD; color: #1565C0; }
+    #treeView {
+      flex: 1;
+      overflow: hidden;
+      background: #F5EDE0;
+      cursor: grab;
+      position: relative;
+    }
+    #treeView:active { cursor: grabbing; }
+    #treeView svg { width: 100%; height: 100%; }
+    .tree-name { pointer-events: none; }
+    @media (max-width: 600px) {
+      .header h1 { font-size: 17px; }
+      .header h1 small { display: none; }
+      .search-box input { width: 100px; }
+      .stats { font-size: 10px; gap: 6px; }
+    }
+  </style>
 </head>
 <body>
   <div id="app">
     <header class="header">
-      <div class="header-title">
-        <h1>🌳 شجرة العائلة</h1>
-        <span class="subtitle">قبيلة العجمان — شجرة تفاعلية</span>
+      <h1>🌳 شجرة العائلة <small>قبيلة العجمان</small></h1>
+      <div class="stats">
+        <span>👤 <span class="num" id="totalCount">0</span></span>
+        <span>📊 <span class="num" id="genCount">0</span> أجيال</span>
       </div>
-      <div class="stats-bar">
-        <span>👤 العدد: <span class="num" id="totalCount">0</span></span>
-        <span>📊 الأجيال: <span class="num" id="generationCount">-</span></span>
-      </div>
-      <div class="header-controls">
+      <div class="controls">
         <div class="search-box">
-          <input type="text" id="searchInput" placeholder="ابحث عن اسم...">
-          <button id="searchBtn" class="btn">🔍</button>
+          <button id="searchBtn" class="btn" style="border-radius:4px 0 0 4px">🔍</button>
+          <input type="text" id="searchInput" placeholder="ابحث عن اسم..." style="border-radius:0 4px 4px 0;border-right:none">
         </div>
-        <div class="zoom-controls">
-          <button id="zoomOutBtn" class="btn btn-icon">−</button>
-          <span id="zoomLevel">100%</span>
-          <button id="zoomInBtn" class="btn btn-icon">+</button>
-          <button id="resetBtn" class="btn btn-icon">⟲</button>
-        </div>
-        <button id="fullscreenBtn" class="btn btn-icon">⛶</button>
-        <button id="exportBtn" class="btn">📥 تصدير</button>
-        <button id="refreshBtn" class="btn">🔄 تحديث</button>
+        <button id="zoomOutBtn" class="btn" style="padding:4px 8px">−</button>
+        <span id="zoomLevel">100%</span>
+        <button id="zoomInBtn" class="btn" style="padding:4px 8px">+</button>
+        <button id="resetBtn" class="btn" style="padding:4px 8px">⟲</button>
+        <button id="fullscreenBtn" class="btn" style="padding:4px 8px">⛶</button>
+        <button id="refreshBtn" class="btn">🔄</button>
       </div>
     </header>
-    <div id="statusBar" class="status-bar">⏳ جاري تحميل البيانات...</div>
-    <main id="treeContainer">
-      <div class="empty-state">⏳ جاري تحميل شجرة العائلة...</div>
-    </main>
+    <div id="statusBar" class="status-bar loading">⏳ جاري تحميل شجرة العائلة...</div>
+    <main id="treeView"></main>
   </div>
   <script src="js/app.js"></script>
 </body>
