@@ -1,8 +1,44 @@
-const DATA_URL = 'data.json';
-const REFRESH_MS = 300000;
-let treeData = null;
+/* ===== شجرة العجمان - التطبيق الرئيسي ===== */
 
+// ====== 1. البيانات الأصلية والمتغيرات ======
+const DATA_URL = 'data.json';
+let TREE_DATA = null;
+let svg, zg, zm, iT, root; // globals used by spec
+let allNodes = [];
+let isDark = false;
+let audioCtx = null;
+const sectorMap = { 'حفيظ': 'left', 'فالح': 'center', 'صعب': 'right' };
+const GOLD = '#D4A017', WOOD = '#5D4037', LEAF_GREEN = '#2E7D32';
+
+// ====== 2. دوال مساعدة ======
 function gid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+function count(n) { let c = 1; if (n.children) n.children.forEach(ch => c += count(ch)); return c; }
+function maxDepth(n, d) { d = d || 0; let m = d; if (n.children) n.children.forEach(ch => m = Math.max(m, maxDepth(ch, d+1))); return m; }
+function allNames(n) { let a = [n.name]; if (n.children) n.children.forEach(c => a = a.concat(allNames(c))); return a; }
+function findNode(n, name) { if (n.data.name === name) return n; if (n.children) for (const c of n.children) { const r = findNode(c, name); if (r) return r; } return null; }
+function filterTree(n, t) {
+  if (!t) return n; const tl = t.toLowerCase();
+  const m = n.data.name.toLowerCase().includes(tl);
+  let f = []; if (n.children) n.children.forEach(c => { const r = filterTree(c, t); if (r) f.push(r); });
+  return (m || f.length > 0) ? { ...n, children: f } : null;
+}
+
+function updateDate() {
+  const now = new Date();
+  document.getElementById('dateDisplay').textContent = now.toLocaleDateString('ar-SA', { weekday:'short', year:'numeric', month:'short', day:'numeric' });
+}
+
+function toast(msg, duration) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('visible');
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('visible'), duration || 2500);
+}
+
+// ====== 3. تحويل البيانات إلى هرمي (toHier) ======
+function toHier(data) {
+  return d3.hierarchy(data, d => d.children);
+}
 
 function parseCSV(csvText) {
   const lines = csvText.trim().split('\n').filter(l => l.trim());
@@ -22,358 +58,530 @@ function parseCSV(csvText) {
       }
       if (parent && parent.children) {
         let n = parent.children.find(c => c.name === name);
-        if (!n) { n = { id: gid(), name, children: [], depth: pd + 1, parent, branch: getBranch(parent) }; parent.children.push(n); }
+        if (!n) {
+          const b = (function getB(p) { return p.branch || (p.parent ? getB(p.parent) : p.name); })(parent);
+          n = { id: gid(), name, children: [], depth: pd + 1, parent, branch: b };
+          parent.children.push(n);
+        }
         anc[lv] = n; parent = n; pd = lv;
       }
     }
   }
   return root;
-  function getBranch(n) { return n.branch || (n.parent ? getBranch(n.parent) : n.name); }
 }
 
-function count(n) { let c = 1; if (n.children) n.children.forEach(ch => c += count(ch)); return c; }
-function maxDepth(n) { let m = n.depth || 0; if (n.children) n.children.forEach(ch => m = Math.max(m, maxDepth(ch))); return m; }
-function allNames(n) { let a = [n.name]; if (n.children) n.children.forEach(c => a = a.concat(allNames(c))); return a; }
-function filterTree(n, t) {
-  if (!t) return n;
-  const tl = t.toLowerCase();
-  const m = n.name.toLowerCase().includes(tl);
-  let f = [];
-  if (n.children) n.children.forEach(c => { const r = filterTree(c, t); if (r) f.push(r); });
-  return (m || f.length > 0) ? { ...n, children: f } : null;
-}
-function findNode(n, name) {
-  if (n.name === name) return n;
-  if (n.children) for (const c of n.children) { const r = findNode(c, name); if (r) return r; }
-  return null;
-}
-function bfs(n) { const r = [n], q = [n]; while (q.length) { const c = q.shift(); if (c.children) c.children.forEach(ch => { r.push(ch); q.push(ch); }); } return r; }
-function dfs(n) { let r = [n]; if (n.children) n.children.forEach(c => r = r.concat(dfs(c))); return r; }
+// ====== 4. بناء الشجرة (buildTree) ======
+function buildTree() {
+  if (!TREE_DATA) return;
 
-const TRUNK = [[500,1260],[500,1222],[500,1184],[500,1146],[500,1108],[500,1070],[500,1032]];
-const FRUIT = [
-  [120,800],[85,710],[880,800],[915,710],[150,600],[105,490],[85,390],[850,600],[895,490],[915,390],
-  [230,300],[295,200],[350,160],[770,300],[705,200],[650,160],[140,965],[95,765],[860,965],[905,765],
-  [210,705],[145,505],[790,705],[855,505],[250,780],[350,680],[450,600],[750,780],[650,680],[550,600],
-  [300,580],[700,580],[380,460],[620,460],[420,360],[580,360]
-];
-const LEAF = [
-  [150,950],[120,870],[85,800],[55,740],[48,630],[100,680],[160,1000],[200,900],[140,900],[80,850],
-  [850,950],[880,870],[915,800],[945,740],[952,630],[900,680],[840,1000],[800,900],[860,900],[920,850],
-  [150,600],[105,490],[85,390],[210,705],[175,605],[145,505],[850,600],[895,490],[915,390],[790,705],
-  [825,605],[855,505],[230,300],[295,200],[350,160],[770,300],[705,200],[650,160],[492,210],[508,210],
-  [300,700],[700,700],[350,550],[650,550],[400,400],[600,400],
-  [180,1000],[140,920],[100,840],[70,770],[820,1000],[860,920],[900,840],[930,770],
-  [165,640],[120,530],[835,640],[880,530],[245,340],[305,230],[755,340],[695,230],[490,240],[510,240]
-];
+  const container = document.getElementById('mainSvg');
+  const width = container.clientWidth || 1200;
+  const height = container.clientHeight || 800;
+  const cx = width / 2, cy = height - 80;
 
-function assignPositions(root) {
-  const all = bfs(root);
-  const byDepth = {};
-  all.forEach(n => { if (n === root) return; const d = n.depth || 1; if (!byDepth[d]) byDepth[d] = []; byDepth[d].push(n); });
-  root._x = 500; root._y = 1315;
-  let ti = 0, fi = 0, li = 0;
-  if (byDepth[1]) byDepth[1].forEach(n => { if (ti < TRUNK.length) { n._x = TRUNK[ti][0]; n._y = TRUNK[ti][1]; ti++; } });
-  for (let d = 2; d <= 3; d++) if (byDepth[d]) byDepth[d].forEach(n => { if (fi < FRUIT.length) { n._x = FRUIT[fi][0]; n._y = FRUIT[fi][1]; fi++; } });
-  for (let d = 4; d <= 9; d++) if (byDepth[d]) byDepth[d].forEach(n => { if (fi < FRUIT.length) { n._x = FRUIT[fi][0]; n._y = FRUIT[fi][1]; fi++; } });
-  for (let d = 1; d <= 9; d++) if (byDepth[d]) byDepth[d].forEach(n => { if (!n._x && li < LEAF.length) { n._x = LEAF[li][0]; n._y = LEAF[li][1]; li++; } });
-}
+  // Clear
+  d3.select(container).selectAll('*').remove();
 
-let selectedNode = null, interG = null, detailG = null;
-let svgEl = null;
+  svg = d3.select(container)
+    .attr('viewBox', `0 0 ${width} ${height}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet');
 
-function showStatus(msg, cls) {
-  const sb = document.getElementById('statusBar');
-  sb.textContent = msg; sb.className = 'status-bar ' + cls;
-}
+  // Defs
+  const defs = svg.append('defs');
+  defs.append('radialGradient').attr('id','skyGrad')
+    .attr('cx','50%').attr('cy','60%').attr('r','60%')
+    .append('stop').attr('offset','0%').attr('stop-color','#87CEEB');
+  defs.select('#skyGrad').append('stop').attr('offset','100%').attr('stop-color','#E0F7FA');
+  defs.append('linearGradient').attr('id','grassGrad').attr('x1','0').attr('y1','0').attr('x2','0').attr('y2','1')
+    .append('stop').attr('offset','0%').attr('stop-color','#4CAF50');
+  defs.select('#grassGrad').append('stop').attr('offset','100%').attr('stop-color','#2E7D32');
+  defs.append('linearGradient').attr('id','trunkGrad').attr('x1','0').attr('y1','0').attr('x2','1').attr('y2','0')
+    .append('stop').attr('offset','0%').attr('stop-color','#4E342E');
+  defs.select('#trunkGrad').append('stop').attr('offset','50%').attr('stop-color','#6D4C41');
+  defs.select('#trunkGrad').append('stop').attr('offset','100%').attr('stop-color','#3E2723');
+  defs.append('filter').attr('id','gGlow')
+    .append('feGaussianBlur').attr('stdDeviation','2').attr('result','blur');
+  defs.select('#gGlow').append('feMerge')
+    .append('feMergeNode').attr('in','blur').nextElementSibling && defs.select('#gGlow').select('feMerge').append('feMergeNode').attr('in','SourceGraphic');
 
-async function loadData() {
-  showStatus('جاري تحميل البيانات...', 'loading');
-  try {
-    const r = await fetch(DATA_URL + '?t=' + Date.now());
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    treeData = await r.json();
-    if (!treeData || !treeData.name) throw new Error('بيانات غير صالحة');
-    const t = count(treeData);
-    if (t < 5) throw new Error('بيانات غير مكتملة');
-    // Add parent refs if missing (for data from JSON)
-    bfs(treeData).forEach(n => {
-      if (n.children) n.children.forEach(c => { if (!c.parent) c.parent = n; if (!c.branch) c.branch = n.branch || n.name; });
+  // Zoom group
+  zg = svg.append('g').attr('id','zoomGroup');
+
+  // ===== BACKGROUND =====
+  // Sky
+  zg.append('rect').attr('width',width).attr('height',height).attr('fill','url(#skyGrad)');
+  // Hills
+  const hills = zg.append('g').attr('opacity','0.15');
+  hills.append('ellipse').attr('cx',width*0.2).attr('cy',height-60).attr('rx',width*0.4).attr('ry',140).attr('fill','#3E8E41');
+  hills.append('ellipse').attr('cx',width*0.8).attr('cy',height-40).attr('rx',width*0.5).attr('ry',120).attr('fill','#388E3C');
+  hills.append('ellipse').attr('cx',width*0.5).attr('cy',height-30).attr('rx',width*0.6).attr('ry',100).attr('fill','#2E7D32');
+  // Grass
+  zg.append('rect').attr('x',0).attr('y',height-25).attr('width',width).attr('height',25).attr('fill','url(#grassGrad)');
+
+  // ===== BUILD HIERARCHY =====
+  root = toHier(TREE_DATA);
+  const totalPeople = count(TREE_DATA);
+  const gens = maxDepth(TREE_DATA);
+
+  // D3 cluster layout
+  const radius = Math.min(width, height) * 0.38;
+  const cluster = d3.cluster()
+    .size([Math.PI * 0.8, radius])
+    .separation((a, b) => (a.data.depth + b.data.depth) * 0.08);
+
+  cluster(root);
+
+  // ===== REMAP SECTORS =====
+  // Sector mapping: حفيظ(left:150-210°), فالح(center:70-150°), صعب(right:350-70°)
+  // Convert d3 angle (0=right, π/2=down) to SVG layout (root at bottom, up=up)
+  // In d3 cluster: x=angle (radians), y=radius
+  // Root gets x=Math.PI/2 (pointing up)
+  root.x = Math.PI / 2;
+
+  function remapSector(node) {
+    if (!node.children) return;
+    const branch = node.data.branch || node.data.name;
+    const isRoot = node.data.name === 'سايل';
+
+    node.children.forEach((ch, i) => {
+      const chBranch = ch.data.branch || ch.data.name;
+      const n = node.children.length;
+      let angle;
+
+      if (isRoot) {
+        // Assign sector based on branch name
+        const sector = sectorMap[ch.data.name] || 'center';
+        if (sector === 'left') angle = 2.8 + (i / (n + 1)) * 0.5;       // ~160-190°
+        else if (sector === 'right') angle = 0.4 + (i / (n + 1)) * 0.5; // ~23-57°
+        else angle = 1.4 + (i / (n + 1)) * 0.6;                         // ~80-114°
+      } else {
+        // Children spread relative to parent
+        const spread = 0.5 + (n > 1 ? 0.3 : 0);
+        const start = node.x - spread / 2;
+        angle = start + (i / (n - 1 || 1)) * spread;
+      }
+
+      ch.x = angle;
+      remapSector(ch);
     });
-    localStorage.setItem('cache', JSON.stringify(treeData));
-    assignPositions(treeData);
-    document.getElementById('totalCount').textContent = t;
-    document.getElementById('genCount').textContent = maxDepth(treeData);
-    showStatus('✓ آخر تحديث: ' + new Date().toLocaleString('ar-SA'), 'success');
-    await loadSvg();
-  } catch (e) {
-    console.error(e);
-    showStatus('⚠ ' + e.message, 'error');
-    const c = localStorage.getItem('cache');
-    if (c) { try { treeData = JSON.parse(c); bfs(treeData).forEach(n => { if (n.children) n.children.forEach(c => { if (!c.parent) c.parent = n; }); }); assignPositions(treeData); await loadSvg(); } catch(e2) {} }
   }
+  remapSector(root);
+
+  // Min angular gap adjustment for leaf nodes
+  function adjustLeafGaps(node) {
+    if (!node.children) return;
+    adjustLeafGaps.cache = adjustLeafGaps.cache || {};
+    const leaves = node.children.filter(c => !c.children || c.children.length === 0);
+    if (leaves.length > 1) {
+      leaves.sort((a, b) => a.x - b.x);
+      let minGap = 0.04;
+      for (let i = 1; i < leaves.length; i++) {
+        const gap = leaves[i].x - leaves[i-1].x;
+        if (gap < minGap) {
+          const adjust = (minGap - gap) / 2;
+          leaves[i].x += adjust;
+          leaves[i-1].x -= adjust;
+        }
+      }
+    }
+    node.children.forEach(adjustLeafGaps);
+  }
+  adjustLeafGaps(root);
+
+  // Recalculate internal node x as average of children
+  function avgChildrenX(node) {
+    if (!node.children || node.children.length === 0) return;
+    node.children.forEach(avgChildrenX);
+    node.x = d3.mean(node.children, d => d.x);
+  }
+  avgChildrenX(root);
+
+  // Convert to cartesian
+  function toCart(node) {
+    const cx2 = cx, cy2 = cy;
+    const px = cx2 + node.y * Math.sin(node.x);
+    const py = cy2 - node.y * Math.cos(node.x);
+    node.px = px; node.py = py;
+    if (node.children) node.children.forEach(toCart);
+  }
+  toCart(root);
+  // Root position
+  root.px = cx; root.py = cy;
+
+  // ===== TRUNK =====
+  const trunkG = zg.append('g');
+  // Main trunk (trapezoid)
+  trunkG.append('path')
+    .attr('d', `M${cx-14},${cy} L${cx-6},${cy-140} L${cx+6},${cy-140} L${cx+14},${cy} Z`)
+    .attr('fill', 'url(#trunkGrad)');
+  // Trunk rings
+  for (let r = 20; r < 140; r += 18) {
+    trunkG.append('ellipse')
+      .attr('cx', cx).attr('cy', cy - r)
+      .attr('rx', 12 - r * 0.04).attr('ry', 4)
+      .attr('fill', 'none').attr('stroke', '#3E2723').attr('stroke-width', 0.8).attr('opacity', 0.4);
+  }
+  // Roots at base
+  for (let s = -1; s <= 1; s += 2) {
+    trunkG.append('path')
+      .attr('d', `M${cx + s*12},${cy} Q${cx + s*40},${cy+10} ${cx + s*60},${cy+5}`)
+      .attr('fill', 'none').attr('stroke', '#4E342E').attr('stroke-width', 3).attr('stroke-linecap', 'round');
+  }
+
+  // ===== ALL NODES COLLECTION =====
+  allNodes = [];
+  function collect(n) { allNodes.push(n); if (n.children) n.children.forEach(collect); }
+  collect(root);
+
+  // ===== BRANCHES =====
+  const branchG = zg.append('g').attr('id','branches');
+  function drawBranches(node) {
+    if (!node.children) return;
+    node.children.forEach(ch => {
+      // Quadratic bezier from parent to child
+      const mx = (node.px + ch.px) / 2;
+      const my = (node.py + ch.py) / 2 - 20;
+      branchG.append('path')
+        .attr('d', `M${node.px},${node.py-10} Q${mx},${my} ${ch.px},${ch.py}`)
+        .attr('fill', 'none').attr('stroke', '#6D4C41').attr('stroke-width', Math.max(0.8, 2.5 - ch.data.depth * 0.2))
+        .attr('stroke-linecap', 'round').attr('opacity', '0.7');
+      drawBranches(ch);
+    });
+  }
+  drawBranches(root);
+
+  // ===== NODES (circles/leaves) AND LABELS =====
+  const nodeG = zg.append('g').attr('id','nodes');
+
+  allNodes.forEach(n => {
+    if (n.data.name === 'سايل') {
+      // Root label at base of trunk
+      nodeG.append('text')
+        .attr('x', n.px).attr('y', n.py + 22)
+        .attr('text-anchor', 'middle').attr('fill', GOLD)
+        .attr('font-family', 'Amiri, serif').attr('font-size', '10').attr('font-weight', 'bold')
+        .text(n.data.name);
+      return;
+    }
+
+    const isLeaf = !n.children || n.children.length === 0;
+    const depth = n.data.depth || 0;
+    const isTop = depth <= 1;
+    const isMid = depth > 1 && depth <= 3;
+
+    // Node shape
+    const g = nodeG.append('g')
+      .attr('class', 'tree-node')
+      .attr('data-name', n.data.name)
+      .attr('data-depth', depth)
+      .attr('transform', `translate(${n.px},${n.py})`);
+
+    let shape;
+    if (isTop) {
+      // Golden circle for top-level
+      shape = g.append('circle').attr('r', 6).attr('fill', GOLD).attr('stroke', '#b8860b').attr('stroke-width', 1);
+      g.append('circle').attr('r', 3).attr('fill', '#FFFCF5').attr('opacity', 0.6);
+    } else if (isMid || !isLeaf) {
+      // Brown circle for intermediate
+      shape = g.append('circle').attr('r', 4.5).attr('fill', '#8D6E63').attr('stroke', '#6D4C41').attr('stroke-width', 0.8);
+    } else {
+      // Leaf shape for leaf nodes
+      const leafSize = 5 + Math.random() * 2;
+      shape = g.append('path')
+        .attr('d', `M0,0 C-4,-3 -5,-10 -2,-14 C2,-10 3,-3 0,0 Z`)
+        .attr('fill', isDark ? '#1B5E20' : LEAF_GREEN)
+        .attr('stroke', isDark ? '#0D3B0F' : '#1B5E20')
+        .attr('stroke-width', 0.5)
+        .attr('transform', `rotate(${Math.random()*30-15}) scale(${leafSize/6})`);
+    }
+
+    // Label
+    const fontSize = isTop ? 8 : (isLeaf ? 6.5 : 7);
+    const labelColor = isTop ? GOLD : (isLeaf ? (isDark ? '#81C784' : '#1B5E20') : '#4E342E');
+    g.append('text')
+      .attr('dy', isTop ? -10 : -9)
+      .attr('text-anchor', 'middle')
+      .attr('fill', labelColor)
+      .attr('font-family', 'Amiri, serif')
+      .attr('font-size', fontSize)
+      .attr('font-weight', isTop ? 'bold' : 'normal')
+      .text(n.data.name);
+
+    // Interactive: hover tooltip
+    g.style('cursor', 'pointer');
+    g.on('mouseenter', (e) => showTooltip(e, n));
+    g.on('mousemove', (e) => moveTooltip(e));
+    g.on('mouseleave', hideTooltip);
+    g.on('click', (e) => { e.stopPropagation(); focusNode(n); });
+
+    // Store ref
+    n._g = g;
+    n._shape = shape;
+  });
+
+  // ===== LEGEND =====
+  document.getElementById('totalCount').textContent = totalPeople;
+  document.getElementById('genCount').textContent = gens;
+
+  // ===== ZOOM =====
+  const zoom = d3.zoom()
+    .scaleExtent([0.3, 5])
+    .on('zoom', (event) => {
+      zg.attr('transform', event.transform);
+    });
+  svg.call(zoom);
+  svg.on('click', () => { hideTooltip(); });
+
+  // Initial zoom to fit
+  svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity.translate(0, 0).scale(1));
+
+  // Birds animation
+  addBirds(width, height);
+
+  window._zoom = zoom;
+  toast('🌳 تم بناء شجرة العجمان بنجاح', 2000);
 }
 
-async function loadSvg() {
-  if (!treeData) return;
-  const container = document.getElementById('treeView');
-  container.innerHTML = '<svg viewBox="0 0 1000 1400" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"></svg>';
-  svgEl = container.querySelector('svg');
+// ====== 5. TOOLTIP ======
+function showTooltip(event, node) {
+  const d = node.data;
+  const tip = document.getElementById('tooltip');
+  document.getElementById('ttName').textContent = d.name;
+  document.getElementById('ttGen').textContent = d.depth || 0;
+  document.getElementById('ttBranch').textContent = d.branch || '—';
+  document.getElementById('ttFather').textContent = d.parent ? d.parent.data.name : '—';
+  document.getElementById('ttChildren').textContent = d.children ? d.children.length : 0;
+  document.getElementById('ttDesc').textContent = count(d) - 1;
+  tip.classList.add('visible');
+  moveTooltip(event);
+}
 
-  try {
-    const r = await fetch('tree.svg?t=' + Date.now());
-    const txt = await r.text();
-    const m = txt.match(/<svg[^>]*>([\s\S]*)<\/svg>/i);
-    svgEl.innerHTML = m ? m[1] : txt;
-  } catch(e) {
-    showStatus('⚠ فشل تحميل الشجرة', 'error');
+function moveTooltip(event) {
+  const tip = document.getElementById('tooltip');
+  tip.style.left = (event.clientX + 16) + 'px';
+  tip.style.top = (event.clientY - 10) + 'px';
+  // Keep in bounds
+  const r = tip.getBoundingClientRect();
+  if (r.right > window.innerWidth) tip.style.left = (event.clientX - r.width - 16) + 'px';
+  if (r.bottom > window.innerHeight) tip.style.top = (event.clientY - r.height + 10) + 'px';
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').classList.remove('visible');
+}
+
+// ====== 6. FOCUS NODE (search result) ======
+function focusNode(node) {
+  if (!node || !node._g) return;
+  // Highlight
+  d3.selectAll('.tree-node').style('opacity', 0.15);
+  node._g.style('opacity', 1);
+  // Highlight ancestors
+  let p = node;
+  while (p.parent) { p = p.parent; if (p._g) p._g.style('opacity', 1); }
+  // Highlight children
+  function highChildren(n) { if (n._g) n._g.style('opacity', 1); if (n.children) n.children.forEach(highChildren); }
+  if (node.children) node.children.forEach(highChildren);
+
+  toast('🔍 ' + node.data.name, 2000);
+}
+
+function unFocusAll() {
+  d3.selectAll('.tree-node').style('opacity', 1);
+}
+
+// ====== 7. SEARCH ======
+function performSearch() {
+  const input = document.getElementById('searchInput');
+  const term = input.value.trim();
+  if (!term || !TREE_DATA) return;
+
+  const all = allNames(TREE_DATA);
+  const matches = all.filter(n => n.includes(term));
+  const exact = all.filter(n => n === term);
+
+  if (matches.length === 0) {
+    toast('🔍 لا توجد نتائج لـ "' + term + '"', 2000);
+    unFocusAll();
     return;
   }
 
-  interG = document.createElementNS('http://www.w3.org/2000/svg', 'g'); interG.id = 'interactive';
-  detailG = document.createElementNS('http://www.w3.org/2000/svg', 'g'); detailG.id = 'details';
-  svgEl.appendChild(interG);
-  svgEl.appendChild(detailG);
+  toast('🔍 ' + matches.length + ' نتيجة', 2000);
 
-  const total = count(treeData), depth = maxDepth(treeData);
-  svgEl.querySelectorAll('text').forEach(t => {
-    if (t.textContent.includes('إجمالي')) t.textContent = 'إجمالي أفراد العائلة: ' + total + ' فرداً';
-    if (t.textContent.includes('Family Tree')) t.textContent = depth + ' أجيال · ' + total + ' فرداً';
-    if (t.textContent.includes('Family Tree') && total > 0) t.textContent = 'قبيلة العجمان · ' + depth + ' أجيال';
-  });
-
-  addLabels();
-  setupViewer();
-  setupGenNav();
-}
-
-function addLabels() {
-  const ns = 'http://www.w3.org/2000/svg';
-  const g = document.createElementNS(ns, 'g'); g.id = 'nameLabels';
-
-  function createLabel(name, x, y, depth) {
-    const wrap = document.createElementNS(ns, 'g');
-    wrap.dataset.name = name; wrap.dataset.depth = depth || '0';
-    wrap.style.cursor = 'pointer';
-    const el = document.createElementNS(ns, 'text');
-    el.setAttribute('x', x); el.setAttribute('y', y);
-    el.setAttribute('text-anchor', 'middle'); el.setAttribute('dominant-baseline', 'central');
-    el.setAttribute('font-family', 'Traditional Arabic, Arial');
-    el.setAttribute('font-size', depth <= 1 ? '9' : '7');
-    el.setAttribute('font-weight', depth <= 1 ? 'bold' : 'normal');
-    if (depth <= 1) el.setAttribute('fill', '#FFFCF5');
-    else if (depth <= 3) el.setAttribute('fill', '#4E342E');
-    else el.setAttribute('fill', '#1B5E20');
-    el.textContent = name;
-    wrap.appendChild(el);
-    wrap.onclick = (e) => { e.stopPropagation(); selectNode(name); };
-    wrap.onmouseenter = () => { if (!selectedNode || selectedNode.name !== name) el.setAttribute('fill', '#D4A017'); };
-    wrap.onmouseleave = () => { if (!selectedNode || selectedNode.name !== name) restoreColor(wrap, el, depth); };
-    g.appendChild(wrap);
-  }
-
-  function restoreColor(wrap, el, d) {
-    if (d <= 1) el.setAttribute('fill', '#FFFCF5');
-    else if (d <= 3) el.setAttribute('fill', '#4E342E');
-    else el.setAttribute('fill', '#1B5E20');
-  }
-
-  bfs(treeData).forEach(n => {
-    if (n.name === 'سايل') return;
-    if (n._x && n._y) createLabel(n.name, n._x, n._y, n.depth);
-  });
-
-  // Root
-  const rWrap = document.createElementNS(ns, 'g'); rWrap.dataset.name = 'سايل'; rWrap.style.cursor = 'pointer';
-  const rEl = document.createElementNS(ns, 'text');
-  rEl.setAttribute('x', 500); rEl.setAttribute('y', 1315);
-  rEl.setAttribute('text-anchor', 'middle'); rEl.setAttribute('dominant-baseline', 'central');
-  rEl.setAttribute('font-family', 'Traditional Arabic, Arial');
-  rEl.setAttribute('fill', '#FFFCF5'); rEl.setAttribute('font-size', '7'); rEl.setAttribute('font-weight', 'bold');
-  rEl.textContent = 'سايل';
-  rWrap.appendChild(rEl);
-  rWrap.onclick = (e) => { e.stopPropagation(); selectNode('سايل'); };
-  rWrap.onmouseenter = () => rEl.setAttribute('fill', '#FFD54F');
-  rWrap.onmouseleave = () => rEl.setAttribute('fill', '#FFFCF5');
-  svgEl.appendChild(rWrap);
-
-  // Insert labels before details so details draws on top
-  svgEl.insertBefore(g, detailG);
-}
-
-function selectNode(name) {
-  const node = findNode(treeData, name);
-  if (!node) return;
-  if (selectedNode && selectedNode.name === name) { deselectNode(); return; }
-  deselectNode();
-  selectedNode = node;
-
-  // Highlight
-  const labels = svgEl.querySelectorAll('#nameLabels g');
-  labels.forEach(el => { const t = el.querySelector('text'); if (t) t.setAttribute('fill', el.dataset.name === name ? '#FFD700' : '#888'); });
-  // Root highlight
-  svgEl.querySelectorAll('[data-name="سايل"] text').forEach(t => t.setAttribute('fill', name === 'سايل' ? '#FFD700' : '#888'));
-
-  showDetails(node);
-}
-
-function deselectNode() {
-  if (interG) interG.innerHTML = '';
-  if (detailG) detailG.innerHTML = '';
-  selectedNode = null;
-  const labels = svgEl.querySelectorAll('#nameLabels g');
-  labels.forEach(el => {
-    const t = el.querySelector('text'); if (!t) return;
-    const d = parseInt(el.dataset.depth) || 0;
-    if (d <= 1) t.setAttribute('fill', '#FFFCF5');
-    else if (d <= 3) t.setAttribute('fill', '#4E342E');
-    else t.setAttribute('fill', '#1B5E20');
-  });
-  svgEl.querySelectorAll('[data-name="سايل"] text').forEach(t => t.setAttribute('fill', '#FFFCF5'));
-  document.getElementById('infoPanel').classList.remove('visible');
-}
-
-function showDetails(node) {
-  const ns = 'http://www.w3.org/2000/svg';
-  const px = node._x || 500, py = node._y || 1315;
-  const isRoot = node.name === 'سايل';
-
-  // Draw children connection lines (interactive expansion)
-  if (node.children && node.children.length > 0) {
-    const children = node.children;
-    const angle = -30;
-    const angleStep = children.length > 1 ? 60 / (children.length - 1) : 0;
-    children.forEach((ch, i) => {
-      const a = (angle + i * angleStep) * Math.PI / 180;
-      const dist = 120 + Math.floor(i / 6) * 60;
-      const cx = px + Math.sin(a) * dist;
-      const cy = py - Math.cos(a) * dist * 0.7 - 30;
-
-      const path = document.createElementNS(ns, 'path');
-      path.setAttribute('d', `M${px},${py-10} Q${px},${(py+cy)/2} ${cx},${cy}`);
-      path.setAttribute('stroke', '#A1887F'); path.setAttribute('stroke-width', '1'); path.setAttribute('fill', 'none');
-      path.setAttribute('stroke-dasharray', '3,2'); path.setAttribute('opacity', '0.6');
-      interG.appendChild(path);
-
-      const txt = document.createElementNS(ns, 'text');
-      txt.setAttribute('x', cx); txt.setAttribute('y', cy);
-      txt.setAttribute('text-anchor', 'middle'); txt.setAttribute('dominant-baseline', 'central');
-      txt.setAttribute('font-family', 'Traditional Arabic, Arial');
-      txt.setAttribute('font-size', '6.5'); txt.setAttribute('fill', '#5D4037');
-      txt.setAttribute('font-weight', 'bold'); txt.style.cursor = 'pointer';
-      txt.textContent = ch.name;
-      interG.appendChild(txt);
-
-      if (ch.children && ch.children.length > 0) {
-        const hint = document.createElementNS(ns, 'text');
-        hint.setAttribute('x', cx); hint.setAttribute('y', cy + 10);
-        hint.setAttribute('text-anchor', 'middle'); hint.setAttribute('font-size', '4.5');
-        hint.setAttribute('fill', '#A1887F'); hint.setAttribute('font-family', 'Traditional Arabic, Arial');
-        hint.textContent = '◀ ' + ch.children.length + ' أبناء';
-        interG.appendChild(hint);
-      }
+  // Find exact match first
+  if (exact.length > 0) {
+    const node = findNode(root, exact[0]);
+    if (node) focusNode(node);
+  } else {
+    // Highlight all matches
+    d3.selectAll('.tree-node').style('opacity', 0.08);
+    matches.forEach(name => {
+      const n = findNode(root, name);
+      if (n && n._g) n._g.style('opacity', 1);
     });
   }
-
-  // Info Panel (HTML overlay, positioned on the tree)
-  const panel = document.getElementById('infoPanel');
-  const info = document.getElementById('personInfo');
-  const gen = node.depth !== undefined ? node.depth : (isRoot ? 0 : 1);
-  const father = node.parent && node.parent.name ? node.parent.name : '—';
-  const grandfather = node.parent && node.parent.parent && node.parent.parent.name ? node.parent.parent.name : '—';
-  const childrenCount = node.children ? node.children.length : 0;
-  const totalDesc = count(node) - 1;
-
-  info.innerHTML = `
-    <div class="p-name">${node.name}</div>
-    <div class="p-divider"></div>
-    <div class="p-row"><span class="p-label">الجيل</span><span class="p-val">${gen}</span></div>
-    <div class="p-row"><span class="p-label">الفرع</span><span class="p-val">${node.branch || '—'}</span></div>
-    <div class="p-row"><span class="p-label">الأب</span><span class="p-val">${father}</span></div>
-    <div class="p-row"><span class="p-label">الجد</span><span class="p-val">${grandfather}</span></div>
-    <div class="p-row"><span class="p-label">الأبناء</span><span class="p-val">${childrenCount}</span></div>
-    <div class="p-row"><span class="p-label">النسل</span><span class="p-val">${totalDesc}</span></div>
-    ${node.parent ? `<button class="p-nav-btn" onclick="selectNode('${node.parent.name}')">⬆ ${node.parent.name}</button>` : ''}
-  `;
-  panel.classList.add('visible');
-
-  // Show gen nav hint
-  const genInfo = document.getElementById('genNavInfo');
-  genInfo.textContent = 'الجيل ' + gen + ' | ' + (node.branch || 'القبيلة');
 }
 
-function setupViewer() {
-  const container = document.getElementById('treeView');
-  const vb = [0, 0, 1000, 1400];
-  function update() {
-    svgEl.setAttribute('viewBox', vb.join(' '));
-    const el = document.getElementById('zoomLevel');
-    if (el) el.textContent = Math.round(1400 / vb[3] * 100) + '%';
+// ====== 8. DARK MODE ======
+function toggleDark() {
+  isDark = !isDark;
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  document.getElementById('darkModeBtn').textContent = isDark ? '☀️' : '🌙';
+  // Rebuild tree with new colors
+  buildTree();
+  toast(isDark ? '🌙 الوضع الليلي' : '☀️ الوضع النهاري', 1500);
+}
+
+// ====== 9. BIRDS ANIMATION ======
+function addBirds(w, h) {
+  const bg = zg.select('rect').node();
+  if (!bg) return;
+  const birdG = zg.append('g').attr('id', 'birds').attr('opacity', 0.3);
+
+  for (let i = 0; i < 5; i++) {
+    const bx = 100 + Math.random() * (w - 200);
+    const by = 30 + Math.random() * 100;
+    const b = birdG.append('path')
+      .attr('d', `M${bx},${by} Q${bx+8},${by-6} ${bx+16},${by} Q${bx+8},${by-4} ${bx},${by}`)
+      .attr('fill', 'none').attr('stroke', '#555').attr('stroke-width', 1.2);
+
+    animateBird(b, bx, by, w);
   }
-  container.onwheel = (e) => {
-    e.preventDefault();
-    const r = container.getBoundingClientRect();
-    const mx = (e.clientX - r.left) / r.width, my = (e.clientY - r.top) / r.height;
-    const f = e.deltaY > 0 ? 1.12 : 0.88;
-    const nw = Math.max(300, Math.min(8000, vb[2] * f)), nh = nw * 1.4;
-    const cx = vb[0] + mx * vb[2], cy = vb[1] + my * vb[3];
-    vb[0] = cx - mx * nw; vb[1] = cy - my * nh; vb[2] = nw; vb[3] = nh; update();
+}
+
+function animateBird(el, x, y, w) {
+  const speed = 3000 + Math.random() * 4000;
+  const dy = (Math.random() - 0.5) * 60;
+
+  el.transition()
+    .duration(speed)
+    .attr('transform', `translate(${w * 0.3},${dy})`)
+    .attr('opacity', 0)
+    .transition()
+    .duration(0)
+    .attr('transform', `translate(${-w * 0.1},${dy})`)
+    .attr('opacity', 0.3)
+    .transition()
+    .duration(speed)
+    .attr('transform', `translate(0,0)`)
+    .on('end', () => animateBird(el, x, y, w));
+}
+
+// ====== 10. CSV UPLOAD ======
+function handleCSVUpload(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const csvData = e.target.result;
+      TREE_DATA = parseCSV(csvData);
+      localStorage.setItem('customData', JSON.stringify(TREE_DATA));
+      buildTree();
+      toast('📂 تم تحميل البيانات الجديدة', 2000);
+    } catch(err) {
+      toast('⚠ خطأ في قراءة الملف: ' + err.message, 3000);
+    }
   };
-  let pan = false, px, py, vbx, vby;
-  container.onmousedown = (e) => { pan = true; px = e.clientX; py = e.clientY; vbx = vb[0]; vby = vb[1]; container.style.cursor = 'grabbing'; };
-  window.onmousemove = (e) => { if (!pan) return; vb[0] = vbx - (e.clientX - px) / container.clientWidth * vb[2]; vb[1] = vby - (e.clientY - py) / container.clientHeight * vb[3]; update(); };
-  window.onmouseup = () => { pan = false; container.style.cursor = 'grab'; };
-  container.ontouchstart = (e) => { if (e.touches.length === 1) { pan = true; px = e.touches[0].clientX; py = e.touches[0].clientY; vbx = vb[0]; vby = vb[1]; } };
-  container.ontouchmove = (e) => { if (pan && e.touches.length === 1) { vb[0] = vbx - (e.touches[0].clientX - px) / container.clientWidth * vb[2]; vb[1] = vby - (e.touches[0].clientY - py) / container.clientHeight * vb[3]; update(); } };
-  container.ontouchend = () => { pan = false; };
-  container.onclick = (e) => { if (e.target === container || e.target.tagName === 'svg') deselectNode(); };
-  window.zoomIn = () => { vb[2] /= 1.4; vb[3] /= 1.4; update(); };
-  window.zoomOut = () => { vb[2] *= 1.4; vb[3] *= 1.4; update(); };
-  window.resetView = () => { vb[0]=0; vb[1]=0; vb[2]=1000; vb[3]=1400; update(); };
+  reader.readAsText(file);
 }
 
-function setupGenNav() {
-  document.getElementById('upBtn').onclick = () => {
-    if (selectedNode && selectedNode.parent) selectNode(selectedNode.parent.name);
-    else showStatus('هذا أعلى جيل', 'warning');
+// ====== 11. SAVE PNG ======
+function savePNG() {
+  toast('📷 جاري حفظ الصورة...', 1500);
+  const container = document.getElementById('mainSvg');
+  const svgData = new XMLSerializer().serializeToString(container);
+  const canvas = document.createElement('canvas');
+  const rect = container.getBoundingClientRect();
+  canvas.width = rect.width * 2; canvas.height = rect.height * 2;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(2, 2);
+  const img = new Image();
+  const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  img.onload = () => {
+    ctx.drawImage(img, 0, 0, rect.width, rect.height);
+    URL.revokeObjectURL(url);
+    const a = document.createElement('a');
+    a.download = 'شجرة_العجمان.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+    toast('✅ تم حفظ الصورة', 1500);
   };
-  document.getElementById('rootBtn').onclick = () => selectNode('سايل');
+  img.onerror = () => toast('⚠ فشل حفظ الصورة، جرب الطباعة بدلاً', 2000);
+  img.src = url;
 }
 
-function performSearch() {
-  const input = document.getElementById('searchInput');
-  if (!input) return;
-  const term = input.value.trim();
-  if (!term || !treeData) return;
-  const r = allNames(filterTree(treeData, term));
-  if (r.length > 1) showStatus('🔍 ' + (r.length - 1) + ' نتيجة', 'search');
-  else showStatus('🔍 لا توجد نتائج', 'error');
-  document.querySelectorAll('#nameLabels g').forEach(el => {
-    const m = el.dataset.name === term;
-    el.style.opacity = (!term || m) ? '1' : '0.08';
-    el.style.filter = m ? 'drop-shadow(0 0 6px #FFD700)' : 'none';
-  });
-  svgEl.querySelectorAll('[data-name="سايل"]').forEach(el => {
-    el.style.opacity = (!term || term === 'سايل') ? '1' : '0.08';
-  });
+// ====== 12. PRINT ======
+function printTree() {
+  document.getElementById('printDate').textContent = new Date().toLocaleDateString('ar-SA');
+  document.getElementById('printHeader').style.display = 'block';
+  window.print();
+  setTimeout(() => document.getElementById('printHeader').style.display = 'none', 500);
 }
 
+// ====== 13. LOAD DATA ======
+async function loadData() {
+  try {
+    const r = await fetch(DATA_URL + '?t=' + Date.now());
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    if (!data || !data.name) throw new Error('بيانات غير صالحة');
+    TREE_DATA = data;
+
+    // Add parent/branch refs
+    (function addRefs(n, p, b) {
+      n.parent = p; n.branch = n.branch || b || n.name;
+      if (n.children) n.children.forEach(c => addRefs(c, n, n.branch));
+    })(TREE_DATA, null, TREE_DATA.name === 'سايل' ? 'القبيلة' : TREE_DATA.name);
+
+    buildTree();
+  } catch (e) {
+    console.error(e);
+    toast('⚠ فشل تحميل البيانات: ' + e.message, 3000);
+    // Try cache
+    const c = localStorage.getItem('cache');
+    if (c) {
+      try { TREE_DATA = JSON.parse(c); buildTree(); toast('📦 تم تحميل من المخبأ', 2000); } catch(e2) {}
+    }
+  }
+}
+
+// ====== 14. WELCOME OVERLAY ======
 document.addEventListener('DOMContentLoaded', () => {
-  loadData();
-  setInterval(loadData, REFRESH_MS);
+  updateDate();
+  setInterval(updateDate, 60000);
+
+  document.getElementById('enterBtn').onclick = () => {
+    document.getElementById('welcomeOverlay').classList.add('hidden');
+    loadData();
+  };
+
+  // Event binding
   document.getElementById('searchBtn').onclick = performSearch;
   document.getElementById('searchInput').onkeyup = (e) => {
     if (e.key === 'Enter') performSearch();
-    if (!e.target.value) {
-      document.querySelectorAll('#nameLabels g').forEach(el => { el.style.opacity = '1'; el.style.filter = 'none'; });
-      svgEl.querySelectorAll('[data-name="سايل"]').forEach(el => el.style.opacity = '1');
-      showStatus('✓', 'success');
+    if (!e.target.value) unFocusAll();
+  };
+  document.getElementById('resetZoomBtn').onclick = () => {
+    if (window._zoom) {
+      d3.select('#mainSvg').transition().duration(500)
+        .call(window._zoom.transform, d3.zoomIdentity);
+      unFocusAll();
     }
   };
-  document.getElementById('zoomInBtn').onclick = () => window.zoomIn && window.zoomIn();
-  document.getElementById('zoomOutBtn').onclick = () => window.zoomOut && window.zoomOut();
-  document.getElementById('resetBtn').onclick = () => window.resetView && window.resetView();
-  document.getElementById('refreshBtn').onclick = loadData;
-  document.getElementById('fullscreenBtn').onclick = () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); };
-  document.getElementById('closeInfo').onclick = deselectNode;
+  document.getElementById('darkModeBtn').onclick = toggleDark;
+  document.getElementById('savePngBtn').onclick = savePNG;
+  document.getElementById('printBtn').onclick = printTree;
+  document.getElementById('fullscreenBtn').onclick = () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  };
+  document.getElementById('csvUpload').onchange = (e) => {
+    if (e.target.files[0]) handleCSVUpload(e.target.files[0]);
+  };
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'f') { e.preventDefault(); document.getElementById('searchInput').focus(); }
+    if (e.key === 'Escape') { unFocusAll(); hideTooltip(); }
+  });
 });

@@ -1,238 +1,187 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>شجرة العائلة - قبيلة العجمان</title>
-  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Traditional Arabic', 'Amiri', 'Scheherazade New', serif;
-      background: #3E2723;
-      color: #FFFCF5;
-      overflow: hidden;
-      height: 100vh;
-      direction: rtl;
-    }
-    #app {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-    .header {
-      background: linear-gradient(135deg, #3E2723, #5D4037);
-      padding: 8px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 6px;
-      z-index: 100;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      border-bottom: 1px solid #D4A01733;
-    }
-    .header h1 {
-      color: #FFD54F;
-      font-size: 22px;
-      font-weight: bold;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .header h1 small {
-      color: #A1887F;
-      font-size: 13px;
-      font-weight: normal;
-    }
-    .controls {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-    .search-box {
-      display: flex;
-      align-items: center;
-    }
-    .search-box input {
-      padding: 5px 10px;
-      border: 1px solid #8D6E63;
-      border-left: none;
-      border-radius: 0 4px 4px 0;
-      background: #FFFCF5;
-      color: #3E2723;
-      font-family: inherit;
-      font-size: 12px;
-      width: 140px;
-      outline: none;
-    }
-    .search-box input:focus { border-color: #D4A017; }
-    .search-box button {
-      padding: 5px 8px;
-      border: 1px solid #8D6E63;
-      border-radius: 4px 0 0 4px;
-      background: #8D6E63;
-      color: #FFFCF5;
-      cursor: pointer;
-      font-size: 13px;
-    }
-    .btn {
-      padding: 5px 10px;
-      border: none;
-      border-radius: 4px;
-      background: #6D4C41;
-      color: #FFFCF5;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 12px;
-      transition: 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 3px;
-    }
-    .btn:hover { background: #8D6E63; }
-    .stats {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      color: #A1887F;
-      font-size: 12px;
-    }
-    .stats .num { color: #FFD54F; font-weight: bold; }
-    #zoomLevel { color: #A1887F; font-size: 11px; min-width: 35px; text-align: center; }
-    .status-bar {
-      padding: 3px 16px;
-      font-size: 11px;
-      text-align: center;
-      transition: 0.3s;
-    }
-    .status-bar.loading { background: #FFF8E1; color: #F57F17; }
-    .status-bar.success { background: #E8F5E9; color: #2E7D32; }
-    .status-bar.error { background: #FFEBEE; color: #C62828; }
-    .status-bar.warning { background: #FFF3E0; color: #E65100; }
-    .status-bar.search { background: #E3F2FD; color: #1565C0; }
-    #treeView {
-      flex: 1;
-      overflow: hidden;
-      background: #F5EDE0;
-      cursor: grab;
-      position: relative;
-    }
-    #treeView:active { cursor: grabbing; }
-    #treeView svg { width: 100%; height: 100%; }
-    .tree-name { pointer-events: none; }
-
-    /* === Info Panel === */
-    #infoPanel {
-      position: absolute;
-      right: 16px;
-      top: 60px;
-      width: 200px;
-      background: #3E2723;
-      border: 1px solid #D4A01755;
-      border-radius: 8px;
-      padding: 12px;
-      color: #FFFCF5;
-      font-size: 12px;
-      z-index: 50;
-      opacity: 0;
-      transform: translateX(20px);
-      transition: 0.3s;
-      pointer-events: none;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
-    #infoPanel.visible { opacity: 1; transform: translateX(0); pointer-events: auto; }
-    .p-name { color: #FFD54F; font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 4px; }
-    .p-divider { height: 1px; background: #D4A01733; margin: 6px 0; }
-    .p-row { display: flex; justify-content: space-between; padding: 2px 0; }
-    .p-label { color: #A1887F; }
-    .p-val { color: #FFFCF5; font-weight: bold; }
-    .p-nav-btn {
-      width: 100%; margin-top: 8px; padding: 5px;
-      background: #6D4C41; color: #FFFCF5; border: 1px solid #8D6E63;
-      border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 11px;
-    }
-    .p-nav-btn:hover { background: #8D6E63; }
-    #closeInfo {
-      position: absolute; left: 4px; top: 4px;
-      background: none; border: none; color: #A1887F; cursor: pointer; font-size: 14px;
-    }
-    #closeInfo:hover { color: #FFFCF5; }
-
-    /* === Gen Nav === */
-    #genNav {
-      position: absolute;
-      left: 16px;
-      bottom: 16px;
-      display: flex;
-      gap: 4px;
-      z-index: 50;
-    }
-    #genNav button {
-      padding: 4px 8px;
-      background: #3E2723CC;
-      border: 1px solid #D4A01744;
-      border-radius: 4px;
-      color: #FFFCF5;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 11px;
-      backdrop-filter: blur(4px);
-    }
-    #genNav button:hover { background: #5D4037CC; border-color: #D4A017; }
-    #genNavInfo {
-      color: #A1887F;
-      font-size: 10px;
-      padding: 4px 8px;
-      background: #3E2723CC;
-      border-radius: 4px;
-      border: 1px solid #D4A01722;
-    }
-
-    @media (max-width: 600px) {
-      .header h1 { font-size: 17px; }
-      .header h1 small { display: none; }
-      .search-box input { width: 100px; }
-      .stats { font-size: 10px; gap: 6px; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>شجرة العجمان</title>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+:root {
+  --bg: #1a1a2e; --bg2: #16213e; --text: #e0d5c1; --gold: #D4A017;
+  --wood: #5D4037; --leaf: #2E7D32; --leaf-light: #4CAF50;
+}
+[data-theme="dark"] {
+  --bg: #0d0d1a; --bg2: #111122; --text: #c4b99a; --gold: #b8860b;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Amiri', serif; background: var(--bg); color: var(--text);
+  overflow: hidden; height: 100vh; direction: rtl;
+}
+/* Overlay */
+#welcomeOverlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  transition: opacity 0.8s; padding: 20px;
+}
+#welcomeOverlay.hidden { opacity: 0; pointer-events: none; }
+#welcomeOverlay h1 { color: var(--gold); font-size: 2.5rem; margin-bottom: 8px; text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+#welcomeOverlay .sub { color: #a08b6e; font-size: 1.1rem; margin-bottom: 20px; }
+#welcomeOverlay .bismillah { color: var(--gold); font-size: 1.8rem; margin-bottom: 16px; opacity: 0.8; }
+#welcomeOverlay .blessing { color: #8a7a5e; font-size: 0.95rem; max-width: 500px; line-height: 1.7; margin-bottom: 20px; }
+#welcomeOverlay .audio-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+#welcomeOverlay .audio-row label { color: #a08b6e; font-size: 0.9rem; cursor: pointer; }
+#welcomeOverlay .audio-row input { color: #a08b6e; font-size: 0.85rem; }
+#enterBtn {
+  padding: 12px 48px; font-size: 1.2rem; font-family: inherit;
+  background: linear-gradient(135deg, #D4A017, #b8860b); color: #1a1a2e;
+  border: none; border-radius: 30px; cursor: pointer; font-weight: bold;
+  box-shadow: 0 4px 20px rgba(212,160,23,0.3); transition: 0.3s;
+}
+#enterBtn:hover { transform: scale(1.05); box-shadow: 0 6px 30px rgba(212,160,23,0.5); }
+/* Toolbar */
+#toolbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: linear-gradient(135deg, #3E2723, #5D4037);
+  padding: 6px 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  border-bottom: 1px solid #D4A01733; direction: rtl;
+}
+#toolbar .brand { color: var(--gold); font-size: 1rem; font-weight: bold; margin-left: auto; }
+#toolbar .brand small { color: #A1887F; font-size: 0.75rem; font-weight: normal; }
+#toolbar .controls { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+#toolbar .controls button, #toolbar .controls input, #toolbar .controls select {
+  padding: 4px 8px; font-family: inherit; font-size: 0.8rem;
+  background: #6D4C41; color: #FFFCF5; border: 1px solid #8D6E63; border-radius: 4px; cursor: pointer; transition: 0.2s;
+}
+#toolbar .controls button:hover { background: #8D6E63; }
+#toolbar .controls input { background: #FFFCF5; color: #3E2723; min-width: 120px; }
+#toolbar .stats { color: #A1887F; font-size: 0.75rem; display: flex; gap: 10px; }
+#toolbar .stats .num { color: var(--gold); font-weight: bold; }
+/* Print header */
+#printHeader { display: none; }
+/* Main SVG */
+#mainSvg { width: 100%; height: 100vh; display: block; }
+/* Tooltip */
+#tooltip {
+  position: fixed; z-index: 200; pointer-events: none;
+  background: rgba(62,39,35,0.95); border: 1px solid #D4A01755;
+  border-radius: 8px; padding: 10px 14px; min-width: 160px;
+  opacity: 0; transition: opacity 0.2s;
+  backdrop-filter: blur(8px); color: #FFFCF5; font-family: 'Amiri', serif;
+}
+#tooltip.visible { opacity: 1; }
+#tooltip .tt-name { color: var(--gold); font-size: 1.1rem; font-weight: bold; margin-bottom: 2px; }
+#tooltip .tt-row { display: flex; justify-content: space-between; gap: 12px; font-size: 0.8rem; padding: 1px 0; }
+#tooltip .tt-label { color: #A1887F; }
+#tooltip .tt-val { color: #FFFCF5; }
+/* Toast */
+#toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 300;
+  background: rgba(62,39,35,0.95); border: 1px solid #D4A01744;
+  border-radius: 20px; padding: 8px 20px; font-size: 0.85rem;
+  opacity: 0; transition: opacity 0.4s; backdrop-filter: blur(8px);
+}
+#toast.visible { opacity: 1; }
+/* Legend */
+#legendPanel {
+  position: fixed; left: 12px; bottom: 50px; z-index: 50;
+  background: rgba(62,39,35,0.9); border: 1px solid #D4A01733;
+  border-radius: 8px; padding: 8px 12px; font-size: 0.75rem;
+  backdrop-filter: blur(4px);
+}
+#legendPanel .l-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+#legendPanel .l-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+@media (max-width: 600px) {
+  #welcomeOverlay h1 { font-size: 1.6rem; }
+  #welcomeOverlay .bismillah { font-size: 1.2rem; }
+  #toolbar .brand { font-size: 0.85rem; }
+  #toolbar .stats { font-size: 0.65rem; gap: 4px; }
+  #toolbar .controls input { min-width: 80px; }
+  #legendPanel { display: none; }
+}
+</style>
 </head>
 <body>
-  <div id="app">
-    <header class="header">
-      <h1>🌳 شجرة العائلة <small>قبيلة العجمان</small></h1>
-      <div class="stats">
-        <span>👤 <span class="num" id="totalCount">0</span></span>
-        <span>📊 <span class="num" id="genCount">0</span> أجيال</span>
-      </div>
-      <div class="controls">
-        <div class="search-box">
-          <button id="searchBtn" class="btn" style="border-radius:4px 0 0 4px">🔍</button>
-          <input type="text" id="searchInput" placeholder="ابحث عن اسم..." style="border-radius:0 4px 4px 0;border-right:none">
-        </div>
-        <button id="zoomOutBtn" class="btn" style="padding:4px 8px">−</button>
-        <span id="zoomLevel">100%</span>
-        <button id="zoomInBtn" class="btn" style="padding:4px 8px">+</button>
-        <button id="resetBtn" class="btn" style="padding:4px 8px">⟲</button>
-        <button id="fullscreenBtn" class="btn" style="padding:4px 8px">⛶</button>
-        <button id="refreshBtn" class="btn">🔄</button>
-      </div>
-    </header>
-    <div id="statusBar" class="status-bar loading">⏳ جاري تحميل شجرة العائلة...</div>
-    <main id="treeView">
-      <div id="infoPanel">
-        <button id="closeInfo">✕</button>
-        <div id="personInfo"></div>
-      </div>
-      <div id="genNav">
-        <button id="upBtn" title="الذهاب للأب">⬆</button>
-        <button id="rootBtn" title="الذهاب للجذر">🏠</button>
-        <span id="genNavInfo"></span>
-      </div>
-    </main>
+
+<!-- Welcome Overlay -->
+<div id="welcomeOverlay">
+  <div class="bismillah">بِسْمِ اللَّـهِ الرَّحْمَـٰنِ الرَّحِيمِ</div>
+  <h1>🌳 شجرة قبيلة العجمان</h1>
+  <p class="sub">النسب والأنساب · توثيق تاريخ القبيلة</p>
+  <p class="blessing">
+    قال رسول الله ﷺ: «تعلموا من أنسابكم ما تصلون به أرحامكم»
+  </p>
+  <div class="audio-row">
+    <label>📀 اختر ملفاً صوتياً (اختياري):</label>
+    <input type="file" id="audioFileInput" accept="audio/*">
   </div>
-  <script src="js/app.js"></script>
+  <button id="enterBtn">✦ ادخل إلى الشجرة ✦</button>
+</div>
+
+<!-- Toolbar -->
+<div id="toolbar">
+  <div class="brand">🌳 شجرة العجمان <small>قبيلة العجمان</small></div>
+  <div class="stats">
+    <span>👤 <span class="num" id="totalCount">0</span></span>
+    <span>📊 <span class="num" id="genCount">0</span> أجيال</span>
+    <span id="dateDisplay" style="color:#A1887F;font-size:0.7rem"></span>
+  </div>
+  <div class="controls">
+    <input type="text" id="searchInput" placeholder="🔍 ابحث عن اسم...">
+    <button id="searchBtn" title="بحث">🔍</button>
+    <button id="resetZoomBtn" title="إعادة العرض">⟲</button>
+    <button id="darkModeBtn" title="الوضع الليلي">🌙</button>
+    <button id="savePngBtn" title="حفظ صورة">📷</button>
+    <button id="printBtn" title="طباعة">🖨️</button>
+    <button id="fullscreenBtn" title="شاشة كاملة">⛶</button>
+    <label style="color:#A1887F;font-size:0.75rem;cursor:pointer">
+      📂 <input type="file" id="csvUpload" accept=".csv" style="display:none">
+    </label>
+  </div>
+</div>
+
+<!-- Print Header -->
+<div id="printHeader">
+  <h1>شجرة قبيلة العجمان</h1>
+  <p id="printDate"></p>
+</div>
+
+<!-- Main SVG -->
+<svg id="mainSvg">
+  <defs>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+</svg>
+
+<!-- Tooltip -->
+<div id="tooltip">
+  <div class="tt-name" id="ttName"></div>
+  <div class="tt-row"><span class="tt-label">الجيل</span><span class="tt-val" id="ttGen"></span></div>
+  <div class="tt-row"><span class="tt-label">الفرع</span><span class="tt-val" id="ttBranch"></span></div>
+  <div class="tt-row"><span class="tt-label">الأب</span><span class="tt-val" id="ttFather"></span></div>
+  <div class="tt-row"><span class="tt-label">الأبناء</span><span class="tt-val" id="ttChildren"></span></div>
+  <div class="tt-row"><span class="tt-label">النسل</span><span class="tt-val" id="ttDesc"></span></div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Legend -->
+<div id="legendPanel">
+  <div class="l-row"><div class="l-dot" style="background:#FFD54F"></div> الجيل الأول</div>
+  <div class="l-row"><div class="l-dot" style="background:#CD7F32"></div> الأجيال الوسطى</div>
+  <div class="l-row"><div class="l-dot" style="background:#2E7D32"></div> الجيل الأخير</div>
+  <div class="l-row"><div class="l-dot" style="background:#D4A017"></div> الفرع الرئيسي</div>
+</div>
+
+<script src="js/app.js"></script>
 </body>
 </html>
