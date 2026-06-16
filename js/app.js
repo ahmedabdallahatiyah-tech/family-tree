@@ -2,7 +2,7 @@
 
 // ====== 1. المتغيرات العمومية ======
 let TREE_DATA = null, root, svg, zg, bgG, zoom;
-let allNodes = [], isDark = false, selectedNode = null;
+let allNodes = [], isDark = false;
 
 const SECTOR_GAP = 0.05;
 const COLORS = ['#5D4037','#2a6018','#1a5080','#b03020','#704010','#5a30a0','#1a7050','#903050'];
